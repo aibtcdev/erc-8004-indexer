@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+.wrangler/
+
+# Environment
+.env
+.dev.vars
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Planning (quest system)
+.planning/
+
+# Generated types
+worker-configuration.d.ts
