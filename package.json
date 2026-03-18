@@ -1,0 +1,23 @@
+{
+  "name": "erc-8004-indexer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone ERC-8004 agent identity indexer on Cloudflare Workers",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:dry-run": "wrangler deploy --dry-run",
+    "check": "tsc --noEmit",
+    "cf-typegen": "wrangler types",
+    "db:init:local": "wrangler d1 execute erc8004-indexer-db --local --file=schema.sql",
+    "db:init:remote": "wrangler d1 execute erc8004-indexer-db --remote --file=schema.sql"
+  },
+  "dependencies": {
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260212.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "erc-8004-indexer",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat_v2"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": { "enabled": false },
+
+  "vars": {
+    "ENVIRONMENT": "development",
+    "STACKS_NETWORK": "mainnet",
+    "STACKS_API_URL": "https://api.hiro.so"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "erc8004-indexer-db",
+      "database_id": "local"
+    }
+  ],
+
+  "services": [
+    {
+      "binding": "LOGS",
+      "service": "worker-logs",
+      "entrypoint": "LogsRPC"
+    }
+  ],
+
+  // Cron trigger: index every 6 hours
+  "triggers": {
+    "crons": ["0 */6 * * *"]
+  },
+
+  "env": {
+    "production": {
+      "name": "erc-8004-indexer-production",
+      "workers_dev": false,
+      "routes": [
+        { "pattern": "erc8004.aibtc.com", "custom_domain": true }
+      ],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "STACKS_NETWORK": "mainnet",
+        "STACKS_API_URL": "https://api.hiro.so"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "erc8004-indexer-db",
+          "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+        }
+      ],
+      "services": [
+        {
+          "binding": "LOGS",
+          "service": "worker-logs-production",
+          "entrypoint": "LogsRPC"
+        }
+      ]
+    }
+  }
+}

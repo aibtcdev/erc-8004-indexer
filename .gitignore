@@ -16,8 +16,8 @@ dist/
 # OS
 .DS_Store
 
-# Planning (quest system)
-.planning/
+# Logs
+*.log
 
 # Generated types
 worker-configuration.d.ts
