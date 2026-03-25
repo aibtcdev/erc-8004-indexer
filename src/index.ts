@@ -10,6 +10,7 @@ import { feedbackRoute } from "./routes/feedback";
 import { validationsRoute } from "./routes/validations";
 import { statusRoute } from "./routes/status";
 import { lensesRoute } from "./routes/lenses";
+import { scheduledHandler } from "./scheduled";
 
 // Export IndexerRPC WorkerEntrypoint so other workers can bind to it
 export { IndexerRPC } from "./rpc";
@@ -85,4 +86,4 @@ app.onError((err, c) => {
   );
 });
 
-export default { fetch: app.fetch };
+export default { fetch: app.fetch, scheduled: scheduledHandler };

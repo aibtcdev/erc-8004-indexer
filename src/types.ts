@@ -49,6 +49,8 @@ export interface Env {
   ENVIRONMENT?: string;
   // Admin token for lens management endpoints (POST /lenses, PUT /lenses/:lens)
   ADMIN_TOKEN?: string;
+  // Hiro API key — used by the scheduled handler for chainhook health checks
+  HIRO_API_KEY?: string;
 }
 
 /**
