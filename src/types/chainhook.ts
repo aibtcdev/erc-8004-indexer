@@ -23,12 +23,6 @@
 // Re-export the primary webhook payload type
 export type { ChainhookEvent } from "@hirosystems/chainhooks-client";
 
-// Re-export the Stacks block type (represents one block in apply/rollback arrays)
-export type { StacksBlock } from "@hirosystems/chainhooks-client";
-
-// Re-export the contract_log operation type
-export type { StacksContractLogOperation } from "@hirosystems/chainhooks-client";
-
 /**
  * The `value` field of a contract_log operation metadata.
  * Chainhooks may return either a string (plain value) or an object with
@@ -45,16 +39,6 @@ export type ContractLogValue =
 export interface ContractLogReprValue {
   hex: string;
   repr: string;
-}
-
-/**
- * A StacksOperation narrowed to only the fields needed for routing.
- * Used when iterating operations before narrowing to StacksContractLogOperation.
- */
-export interface RawStacksOperation {
-  type: string;
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
 }
 
 /**
@@ -80,45 +64,3 @@ export function isReprValue(value: ContractLogValue): value is ContractLogReprVa
   return typeof value === "object" && value !== null && "repr" in value && "hex" in value;
 }
 
-/**
- * Extracts all contract_log operations from a ChainhookEvent's apply blocks
- * that match a given contract_identifier.
- *
- * Returns an array of tuples: [txHash, operation] for further processing.
- */
-export function extractContractLogs(
-  event: import("@hirosystems/chainhooks-client").ChainhookEvent,
-  contractIdentifier: string
-): Array<{
-  blockIndex: number;
-  blockHash: string;
-  txHash: string;
-  operation: import("@hirosystems/chainhooks-client").StacksContractLogOperation;
-}> {
-  const results: Array<{
-    blockIndex: number;
-    blockHash: string;
-    txHash: string;
-    operation: import("@hirosystems/chainhooks-client").StacksContractLogOperation;
-  }> = [];
-
-  for (const block of event.event.apply) {
-    for (const tx of block.transactions) {
-      for (const op of tx.operations) {
-        if (
-          isContractLogOperation(op) &&
-          op.metadata.contract_identifier === contractIdentifier
-        ) {
-          results.push({
-            blockIndex: block.block_identifier.index,
-            blockHash: block.block_identifier.hash,
-            txHash: tx.transaction_identifier.hash,
-            operation: op,
-          });
-        }
-      }
-    }
-  }
-
-  return results;
-}
