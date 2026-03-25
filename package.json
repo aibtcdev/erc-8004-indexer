@@ -14,7 +14,8 @@
     "cf-typegen": "npm run wrangler -- types",
     "register": "tsx --tsconfig tsconfig.scripts.json scripts/register-chainhooks.ts",
     "check-chainhook": "tsx --tsconfig tsconfig.scripts.json scripts/check-chainhook.ts",
-    "rotate-secret": "tsx --tsconfig tsconfig.scripts.json scripts/rotate-secret.ts"
+    "rotate-secret": "tsx --tsconfig tsconfig.scripts.json scripts/rotate-secret.ts",
+    "register-logs-app": "set -a && . ./.env && set +a && tsx --tsconfig tsconfig.scripts.json scripts/register-worker-logs-app.ts"
   },
   "dependencies": {
     "@hirosystems/chainhooks-client": "^2.1.1",

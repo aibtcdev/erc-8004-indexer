@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { VERSION } from "./version";
 import type { Env, AppVariables } from "./types";
 import { loggerMiddleware } from "./middleware/logger";
+import { requestLoggerMiddleware } from "./middleware/request-logger";
 import { webhookRoute } from "./webhook";
 
 // Create Hono app with type safety
@@ -20,6 +21,10 @@ app.use(
 
 // Apply logger middleware globally (creates request-scoped logger + requestId)
 app.use("*", loggerMiddleware);
+
+// Apply request logger globally (logs method, path, status, duration_ms per request)
+// Must run after loggerMiddleware so c.var.logger is available
+app.use("*", requestLoggerMiddleware);
 
 // Root endpoint — service info
 app.get("/", (c) => {
