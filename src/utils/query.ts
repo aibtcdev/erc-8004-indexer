@@ -17,6 +17,35 @@ import type {
 } from "../types/db";
 
 // ============================================================
+// Shared query helpers
+// ============================================================
+
+interface WhereClause {
+  sql: string;
+  bindings: (string | number)[];
+}
+
+/**
+ * Build a WHERE clause from an initial condition and optional filter fields.
+ * Filters with undefined values are skipped.
+ */
+function buildWhereClause(
+  initial: { sql: string; value: string | number },
+  filters: Record<string, string | number | boolean | undefined>
+): WhereClause {
+  const conditions = [initial.sql];
+  const bindings: (string | number)[] = [initial.value];
+
+  for (const [column, value] of Object.entries(filters)) {
+    if (value === undefined) continue;
+    conditions.push(`${column} = ?`);
+    bindings.push(typeof value === "boolean" ? (value ? 1 : 0) : value);
+  }
+
+  return { sql: conditions.join(" AND "), bindings };
+}
+
+// ============================================================
 // Agents
 // ============================================================
 
@@ -84,24 +113,10 @@ export async function queryFeedbackSummary(
   agentId: number,
   filters: FeedbackFilters = {}
 ): Promise<FeedbackSummary> {
-  // Build WHERE clause dynamically
-  const conditions: string[] = ["agent_id = ?"];
-  const bindings: (string | number)[] = [agentId];
-
-  if (filters.client) {
-    conditions.push("client = ?");
-    bindings.push(filters.client);
-  }
-  if (filters.tag1) {
-    conditions.push("tag1 = ?");
-    bindings.push(filters.tag1);
-  }
-  if (filters.tag2) {
-    conditions.push("tag2 = ?");
-    bindings.push(filters.tag2);
-  }
-
-  const where = conditions.join(" AND ");
+  const { sql: where, bindings } = buildWhereClause(
+    { sql: "agent_id = ?", value: agentId },
+    { client: filters.client, tag1: filters.tag1, tag2: filters.tag2 }
+  );
 
   // Aggregate counts
   const countRow = await db
@@ -157,23 +172,10 @@ export async function queryFeedback(
     tag2,
   }: { limit: number; offset: number } & FeedbackFilters
 ): Promise<{ rows: FeedbackRow[]; total: number }> {
-  const conditions: string[] = ["agent_id = ?"];
-  const bindings: (string | number)[] = [agentId];
-
-  if (client) {
-    conditions.push("client = ?");
-    bindings.push(client);
-  }
-  if (tag1) {
-    conditions.push("tag1 = ?");
-    bindings.push(tag1);
-  }
-  if (tag2) {
-    conditions.push("tag2 = ?");
-    bindings.push(tag2);
-  }
-
-  const where = conditions.join(" AND ");
+  const { sql: where, bindings } = buildWhereClause(
+    { sql: "agent_id = ?", value: agentId },
+    { client, tag1, tag2 }
+  );
 
   const [countResult, rowsResult] = await Promise.all([
     db
@@ -316,15 +318,10 @@ export async function queryValidations(
     has_response,
   }: { limit: number; offset: number; has_response?: boolean }
 ): Promise<{ rows: ValidationRequestRow[]; total: number }> {
-  const conditions: string[] = ["agent_id = ?"];
-  const bindings: (string | number)[] = [agentId];
-
-  if (has_response !== undefined) {
-    conditions.push("has_response = ?");
-    bindings.push(has_response ? 1 : 0);
-  }
-
-  const where = conditions.join(" AND ");
+  const { sql: where, bindings } = buildWhereClause(
+    { sql: "agent_id = ?", value: agentId },
+    { has_response }
+  );
 
   const [countResult, rowsResult] = await Promise.all([
     db
