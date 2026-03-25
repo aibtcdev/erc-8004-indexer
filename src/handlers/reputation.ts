@@ -154,15 +154,8 @@ export async function handleFeedbackRevoked(
   logger: Logger
 ): Promise<void> {
   const { "agent-id": agentId, client, index } = event.payload;
-  logger.info("handleFeedbackRevoked", {
-    agentId,
-    client,
-    index,
-    blockHeight,
-    txHash,
-  });
-  // Warn on every revocation so downstream monitoring can detect bulk patterns
-  logger.warn("handleFeedbackRevoked: feedback revocation recorded", {
+  // Warn (not info) on every revocation so downstream monitoring can detect bulk patterns
+  logger.warn("handleFeedbackRevoked", {
     agentId,
     client,
     index,
