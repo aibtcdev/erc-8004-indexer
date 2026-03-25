@@ -56,3 +56,7 @@ export interface AppVariables {
   requestId: string;
   logger: Logger;
 }
+
+// Re-export domain types from the types/ subdirectory.
+// Consumers can import from either 'src/types' or 'src/types/index'.
+export * from "./types/index";

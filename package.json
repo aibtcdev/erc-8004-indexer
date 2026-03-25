@@ -14,6 +14,7 @@
     "cf-typegen": "npm run wrangler -- types"
   },
   "dependencies": {
+    "@hirosystems/chainhooks-client": "^2.1.1",
     "hono": "^4.12.7"
   },
   "devDependencies": {
