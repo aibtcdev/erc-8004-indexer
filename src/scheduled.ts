@@ -21,9 +21,8 @@ import type {
   ChainhookNetwork,
   EvaluateChainhookRequest,
 } from "@hirosystems/chainhooks-client";
-import type { Env, Logger, LogsRPC } from "./types";
-
-const APP_ID = "erc8004-indexer";
+import type { Env } from "./types";
+import { createLogger } from "./middleware/logger";
 
 // ── Stacks API endpoints ─────────────────────────────────────────────────────
 
@@ -39,71 +38,6 @@ const GAP_BACKFILL_THRESHOLD = 10;
 const GAP_ALERT_THRESHOLD = 100;
 /** Maximum blocks to backfill per cron invocation */
 const BACKFILL_BATCH_SIZE = 20;
-
-// ── Logger factory ────────────────────────────────────────────────────────────
-
-function isLogsRPC(logs: unknown): logs is LogsRPC {
-  return (
-    typeof logs === "object" &&
-    logs !== null &&
-    typeof (logs as LogsRPC).info === "function" &&
-    typeof (logs as LogsRPC).warn === "function" &&
-    typeof (logs as LogsRPC).error === "function" &&
-    typeof (logs as LogsRPC).debug === "function"
-  );
-}
-
-/**
- * Create a logger for the scheduled handler context.
- * Uses worker-logs RPC if LOGS binding is valid, else falls back to console.
- */
-function createScheduledLogger(
-  env: Env,
-  ctx: Pick<ExecutionContext, "waitUntil">
-): Logger {
-  const baseContext: Record<string, unknown> = { trigger: "cron" };
-
-  if (isLogsRPC(env.LOGS)) {
-    const logs = env.LOGS;
-    return {
-      info: (message, context) => {
-        ctx.waitUntil(
-          logs.info(APP_ID, message, { ...baseContext, ...context })
-        );
-      },
-      warn: (message, context) => {
-        ctx.waitUntil(
-          logs.warn(APP_ID, message, { ...baseContext, ...context })
-        );
-      },
-      error: (message, context) => {
-        ctx.waitUntil(
-          logs.error(APP_ID, message, { ...baseContext, ...context })
-        );
-      },
-      debug: (message, context) => {
-        ctx.waitUntil(
-          logs.debug(APP_ID, message, { ...baseContext, ...context })
-        );
-      },
-    };
-  }
-
-  return {
-    info: (message, context) => {
-      console.log(`[INFO] ${message}`, { ...baseContext, ...context });
-    },
-    warn: (message, context) => {
-      console.warn(`[WARN] ${message}`, { ...baseContext, ...context });
-    },
-    error: (message, context) => {
-      console.error(`[ERROR] ${message}`, { ...baseContext, ...context });
-    },
-    debug: (message, context) => {
-      console.debug(`[DEBUG] ${message}`, { ...baseContext, ...context });
-    },
-  };
-}
 
 // ── Stacks API ────────────────────────────────────────────────────────────────
 
@@ -129,7 +63,7 @@ export async function scheduledHandler(
   env: Env,
   ctx: ExecutionContext
 ): Promise<void> {
-  const logger = createScheduledLogger(env, ctx);
+  const logger = createLogger(env.LOGS, ctx, { trigger: "cron" });
 
   // Step 1: Read chainhook UUID from KV
   const uuid = await env.INDEXER_KV.get("chainhook:uuid");

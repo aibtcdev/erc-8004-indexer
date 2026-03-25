@@ -4,9 +4,10 @@ import type { Env, Logger, LogsRPC, AppVariables } from "../types";
 const APP_ID = "erc8004-indexer";
 
 /**
- * Type guard to check if LOGS binding has required RPC methods
+ * Type guard to check if LOGS binding has required RPC methods.
+ * Exported for reuse by the scheduled handler.
  */
-function isLogsRPC(logs: unknown): logs is LogsRPC {
+export function isLogsRPC(logs: unknown): logs is LogsRPC {
   return (
     typeof logs === "object" &&
     logs !== null &&
@@ -18,37 +19,32 @@ function isLogsRPC(logs: unknown): logs is LogsRPC {
 }
 
 /**
- * Create a logger that sends to worker-logs RPC service
+ * Create a logger backed by either worker-logs RPC or console fallback.
+ * Exported for reuse by the scheduled handler (which has no Hono context).
  */
-function createRpcLogger(
-  logs: LogsRPC,
-  ctx: Pick<ExecutionContext, "waitUntil">,
+export function createLogger(
+  logsBinding: unknown,
+  ctx: Pick<ExecutionContext, "waitUntil"> | null,
   baseContext: Record<string, unknown>
 ): Logger {
-  return {
-    info: (message, context) => {
-      ctx.waitUntil(logs.info(APP_ID, message, { ...baseContext, ...context }));
-    },
-    warn: (message, context) => {
-      ctx.waitUntil(logs.warn(APP_ID, message, { ...baseContext, ...context }));
-    },
-    error: (message, context) => {
-      ctx.waitUntil(
-        logs.error(APP_ID, message, { ...baseContext, ...context })
-      );
-    },
-    debug: (message, context) => {
-      ctx.waitUntil(
-        logs.debug(APP_ID, message, { ...baseContext, ...context })
-      );
-    },
-  };
-}
+  if (isLogsRPC(logsBinding) && ctx) {
+    const logs = logsBinding;
+    return {
+      info: (message, context) => {
+        ctx.waitUntil(logs.info(APP_ID, message, { ...baseContext, ...context }));
+      },
+      warn: (message, context) => {
+        ctx.waitUntil(logs.warn(APP_ID, message, { ...baseContext, ...context }));
+      },
+      error: (message, context) => {
+        ctx.waitUntil(logs.error(APP_ID, message, { ...baseContext, ...context }));
+      },
+      debug: (message, context) => {
+        ctx.waitUntil(logs.debug(APP_ID, message, { ...baseContext, ...context }));
+      },
+    };
+  }
 
-/**
- * Create a console logger fallback for local development
- */
-function createConsoleLogger(baseContext: Record<string, unknown>): Logger {
   return {
     info: (message, context) => {
       console.log(`[INFO] ${message}`, { ...baseContext, ...context });
@@ -80,10 +76,7 @@ export async function loggerMiddleware(
     method: c.req.method,
   };
 
-  // Use RPC logger if LOGS binding is available and valid, else console fallback
-  const logger = isLogsRPC(c.env.LOGS)
-    ? createRpcLogger(c.env.LOGS, c.executionCtx, baseContext)
-    : createConsoleLogger(baseContext);
+  const logger = createLogger(c.env.LOGS, c.executionCtx, baseContext);
 
   c.set("requestId", requestId);
   c.set("logger", logger);
