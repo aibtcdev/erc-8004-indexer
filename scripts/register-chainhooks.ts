@@ -28,6 +28,7 @@ import {
   type ChainhookDefinition,
   type ChainhookNetwork,
 } from "@hirosystems/chainhooks-client";
+import { requireEnv, parseNetwork } from "./helpers.js";
 
 // ── Contract addresses ────────────────────────────────────────────────────────
 
@@ -44,16 +45,6 @@ const CONTRACT_NAMES = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    console.error(`Error: Missing required environment variable: ${name}`);
-    console.error(`  Set it in your .env file or export it before running.`);
-    process.exit(1);
-  }
-  return value;
-}
-
 function normalizeWebhookUrl(url: string): string {
   // Ensure the URL ends with /webhook exactly once
   const base = url.replace(/\/webhook\/?$/, "").replace(/\/$/, "");
@@ -67,15 +58,7 @@ async function main(): Promise<void> {
   const apiKey = requireEnv("HIRO_API_KEY");
   const webhookUrl = requireEnv("WEBHOOK_URL");
 
-  // Read optional env vars with defaults
-  const rawNetwork = process.env["CHAINHOOK_NETWORK"] ?? "testnet";
-  if (rawNetwork !== "mainnet" && rawNetwork !== "testnet") {
-    console.error(
-      `Error: CHAINHOOK_NETWORK must be "mainnet" or "testnet", got "${rawNetwork}"`
-    );
-    process.exit(1);
-  }
-  const network: ChainhookNetwork = rawNetwork;
+  const network = parseNetwork();
 
   const startBlockHeight = parseInt(
     process.env["START_BLOCK_HEIGHT"] ?? "0",

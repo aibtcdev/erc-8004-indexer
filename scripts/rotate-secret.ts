@@ -26,34 +26,14 @@
 import {
   ChainhooksClient,
   CHAINHOOKS_BASE_URL,
-  type ChainhookNetwork,
 } from "@hirosystems/chainhooks-client";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    console.error(`Error: Missing required environment variable: ${name}`);
-    console.error(`  Set it in your .env file or export it before running.`);
-    process.exit(1);
-  }
-  return value;
-}
+import { requireEnv, parseNetwork } from "./helpers.js";
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
   const apiKey = requireEnv("HIRO_API_KEY");
-
-  const rawNetwork = process.env["CHAINHOOK_NETWORK"] ?? "testnet";
-  if (rawNetwork !== "mainnet" && rawNetwork !== "testnet") {
-    console.error(
-      `Error: CHAINHOOK_NETWORK must be "mainnet" or "testnet", got "${rawNetwork}"`
-    );
-    process.exit(1);
-  }
-  const network: ChainhookNetwork = rawNetwork;
+  const network = parseNetwork();
 
   const baseUrl = CHAINHOOKS_BASE_URL[network];
   const client = new ChainhooksClient({ baseUrl, apiKey });

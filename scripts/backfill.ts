@@ -33,28 +33,14 @@ import {
   type EvaluateChainhookRequest,
   type ChainhookNetwork,
 } from "@hirosystems/chainhooks-client";
+import { requireEnv, parseNetwork, STACKS_API_URL } from "./helpers.js";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const MAX_BLOCK_RANGE = 50_000;
 const REQUEST_DELAY_MS = 100; // 100ms between requests to avoid rate limiting
 
-const STACKS_API_URL: Record<ChainhookNetwork, string> = {
-  mainnet: "https://api.hiro.so/v2/info",
-  testnet: "https://api.testnet.hiro.so/v2/info",
-};
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    console.error(`Error: Missing required environment variable: ${name}`);
-    console.error(`  Set it in your .env file or export it before running.`);
-    process.exit(1);
-  }
-  return value;
-}
 
 async function fetchCurrentBlockHeight(
   network: ChainhookNetwork
@@ -103,15 +89,7 @@ async function main(): Promise<void> {
   const apiKey = requireEnv("HIRO_API_KEY");
   const uuid = requireEnv("CHAINHOOK_UUID");
 
-  // Read optional env vars with defaults
-  const rawNetwork = process.env["CHAINHOOK_NETWORK"] ?? "testnet";
-  if (rawNetwork !== "mainnet" && rawNetwork !== "testnet") {
-    console.error(
-      `Error: CHAINHOOK_NETWORK must be "mainnet" or "testnet", got "${rawNetwork}"`
-    );
-    process.exit(1);
-  }
-  const network: ChainhookNetwork = rawNetwork;
+  const network = parseNetwork();
 
   const startBlock = parseInt(process.env["START_BLOCK_HEIGHT"] ?? "0", 10);
   if (isNaN(startBlock) || startBlock < 0) {
