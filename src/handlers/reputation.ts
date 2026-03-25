@@ -46,17 +46,28 @@ export async function handleClientApproved(
     event.payload;
   logger.info("handleClientApproved", { agentId, client, blockHeight, txHash });
 
-  await db
-    .prepare(
-      `INSERT INTO client_approvals (agent_id, client, index_limit, set_at_block, set_at_tx)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(agent_id, client) DO UPDATE SET
-         index_limit = excluded.index_limit,
-         set_at_block = excluded.set_at_block,
-         set_at_tx = excluded.set_at_tx`
-    )
-    .bind(Number(agentId), client, indexLimit, blockHeight, txHash)
-    .run();
+  try {
+    await db
+      .prepare(
+        `INSERT INTO client_approvals (agent_id, client, index_limit, set_at_block, set_at_tx)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(agent_id, client) DO UPDATE SET
+           index_limit = excluded.index_limit,
+           set_at_block = excluded.set_at_block,
+           set_at_tx = excluded.set_at_tx`
+      )
+      .bind(Number(agentId), client, indexLimit, blockHeight, txHash)
+      .run();
+  } catch (err) {
+    logger.error("handleClientApproved: db write failed", {
+      agentId,
+      client,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }
 
 /**
@@ -93,31 +104,43 @@ export async function handleNewFeedback(
     txHash,
   });
 
-  await db
-    .prepare(
-      `INSERT INTO feedback
-         (agent_id, client, feedback_index, value, value_decimals, wad_value,
-          tag1, tag2, endpoint, feedback_uri, feedback_hash,
-          is_revoked, created_at_block, created_at_tx)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
-       ON CONFLICT(agent_id, client, feedback_index) DO NOTHING`
-    )
-    .bind(
-      Number(agentId),
+  try {
+    await db
+      .prepare(
+        `INSERT INTO feedback
+           (agent_id, client, feedback_index, value, value_decimals, wad_value,
+            tag1, tag2, endpoint, feedback_uri, feedback_hash,
+            is_revoked, created_at_block, created_at_tx)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+         ON CONFLICT(agent_id, client, feedback_index) DO NOTHING`
+      )
+      .bind(
+        Number(agentId),
+        client,
+        Number(index),
+        value,
+        valueDecimals,
+        wadValue,
+        tag1,
+        tag2,
+        endpoint,
+        feedbackUri,
+        feedbackHash,
+        blockHeight,
+        txHash
+      )
+      .run();
+  } catch (err) {
+    logger.error("handleNewFeedback: db write failed", {
+      agentId,
       client,
-      Number(index),
-      value,
-      valueDecimals,
-      wadValue,
-      tag1,
-      tag2,
-      endpoint,
-      feedbackUri,
-      feedbackHash,
+      index,
       blockHeight,
-      txHash
-    )
-    .run();
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }
 
 /**
@@ -138,15 +161,35 @@ export async function handleFeedbackRevoked(
     blockHeight,
     txHash,
   });
+  // Warn on every revocation so downstream monitoring can detect bulk patterns
+  logger.warn("handleFeedbackRevoked: feedback revocation recorded", {
+    agentId,
+    client,
+    index,
+    blockHeight,
+    txHash,
+  });
 
-  await db
-    .prepare(
-      `UPDATE feedback
-       SET is_revoked = 1, revoked_at_block = ?, revoked_at_tx = ?
-       WHERE agent_id = ? AND client = ? AND feedback_index = ?`
-    )
-    .bind(blockHeight, txHash, Number(agentId), client, Number(index))
-    .run();
+  try {
+    await db
+      .prepare(
+        `UPDATE feedback
+         SET is_revoked = 1, revoked_at_block = ?, revoked_at_tx = ?
+         WHERE agent_id = ? AND client = ? AND feedback_index = ?`
+      )
+      .bind(blockHeight, txHash, Number(agentId), client, Number(index))
+      .run();
+  } catch (err) {
+    logger.error("handleFeedbackRevoked: db write failed", {
+      agentId,
+      client,
+      index,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }
 
 /**
@@ -176,22 +219,34 @@ export async function handleResponseAppended(
     txHash,
   });
 
-  await db
-    .prepare(
-      `INSERT INTO feedback_responses
-         (agent_id, client, feedback_index, responder, response_uri, response_hash,
-          created_at_block, created_at_tx)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
-      Number(agentId),
+  try {
+    await db
+      .prepare(
+        `INSERT INTO feedback_responses
+           (agent_id, client, feedback_index, responder, response_uri, response_hash,
+            created_at_block, created_at_tx)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        Number(agentId),
+        client,
+        Number(index),
+        responder,
+        responseUri,
+        responseHash,
+        blockHeight,
+        txHash
+      )
+      .run();
+  } catch (err) {
+    logger.error("handleResponseAppended: db write failed", {
+      agentId,
       client,
-      Number(index),
-      responder,
-      responseUri,
-      responseHash,
+      index,
       blockHeight,
-      txHash
-    )
-    .run();
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }

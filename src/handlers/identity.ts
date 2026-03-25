@@ -25,14 +25,24 @@ export async function handleRegistered(
   const { "agent-id": agentId, owner, "token-uri": tokenUri } = event.payload;
   logger.info("handleRegistered", { agentId, owner, blockHeight, txHash });
 
-  await db
-    .prepare(
-      `INSERT INTO agents (agent_id, owner, token_uri, created_at_block, created_at_tx)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(agent_id) DO NOTHING`
-    )
-    .bind(Number(agentId), owner, tokenUri || null, blockHeight, txHash)
-    .run();
+  try {
+    await db
+      .prepare(
+        `INSERT INTO agents (agent_id, owner, token_uri, created_at_block, created_at_tx)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(agent_id) DO NOTHING`
+      )
+      .bind(Number(agentId), owner, tokenUri || null, blockHeight, txHash)
+      .run();
+  } catch (err) {
+    logger.error("handleRegistered: db write failed", {
+      agentId,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }
 
 /**
@@ -50,17 +60,28 @@ export async function handleMetadataSet(
   const { "agent-id": agentId, key, "value-len": valueLen } = event.payload;
   logger.info("handleMetadataSet", { agentId, key, blockHeight, txHash });
 
-  await db
-    .prepare(
-      `INSERT INTO agent_metadata (agent_id, key, value_hex, value_len, set_at_block, set_at_tx)
-       VALUES (?, ?, '', ?, ?, ?)
-       ON CONFLICT(agent_id, key) DO UPDATE SET
-         value_len = excluded.value_len,
-         set_at_block = excluded.set_at_block,
-         set_at_tx = excluded.set_at_tx`
-    )
-    .bind(Number(agentId), key, Number(valueLen), blockHeight, txHash)
-    .run();
+  try {
+    await db
+      .prepare(
+        `INSERT INTO agent_metadata (agent_id, key, value_hex, value_len, set_at_block, set_at_tx)
+         VALUES (?, ?, '', ?, ?, ?)
+         ON CONFLICT(agent_id, key) DO UPDATE SET
+           value_len = excluded.value_len,
+           set_at_block = excluded.set_at_block,
+           set_at_tx = excluded.set_at_tx`
+      )
+      .bind(Number(agentId), key, Number(valueLen), blockHeight, txHash)
+      .run();
+  } catch (err) {
+    logger.error("handleMetadataSet: db write failed", {
+      agentId,
+      key,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }
 
 /**
@@ -76,12 +97,22 @@ export async function handleUriUpdated(
   const { "agent-id": agentId, "new-uri": newUri } = event.payload;
   logger.info("handleUriUpdated", { agentId, newUri, blockHeight, txHash });
 
-  await db
-    .prepare(
-      `UPDATE agents SET token_uri = ?, updated_at_block = ? WHERE agent_id = ?`
-    )
-    .bind(newUri, blockHeight, Number(agentId))
-    .run();
+  try {
+    await db
+      .prepare(
+        `UPDATE agents SET token_uri = ?, updated_at_block = ? WHERE agent_id = ?`
+      )
+      .bind(newUri, blockHeight, Number(agentId))
+      .run();
+  } catch (err) {
+    logger.error("handleUriUpdated: db write failed", {
+      agentId,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }
 
 /**
@@ -103,17 +134,28 @@ export async function handleApprovalForAll(
     txHash,
   });
 
-  await db
-    .prepare(
-      `INSERT INTO approvals (agent_id, operator, approved, set_at_block, set_at_tx)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(agent_id, operator) DO UPDATE SET
-         approved = excluded.approved,
-         set_at_block = excluded.set_at_block,
-         set_at_tx = excluded.set_at_tx`
-    )
-    .bind(Number(agentId), operator, approved ? 1 : 0, blockHeight, txHash)
-    .run();
+  try {
+    await db
+      .prepare(
+        `INSERT INTO approvals (agent_id, operator, approved, set_at_block, set_at_tx)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(agent_id, operator) DO UPDATE SET
+           approved = excluded.approved,
+           set_at_block = excluded.set_at_block,
+           set_at_tx = excluded.set_at_tx`
+      )
+      .bind(Number(agentId), operator, approved ? 1 : 0, blockHeight, txHash)
+      .run();
+  } catch (err) {
+    logger.error("handleApprovalForAll: db write failed", {
+      agentId,
+      operator,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }
 
 /**
@@ -130,10 +172,20 @@ export async function handleTransfer(
   const { "token-id": tokenId, recipient } = event.payload;
   logger.info("handleTransfer", { tokenId, recipient, blockHeight, txHash });
 
-  await db
-    .prepare(
-      `UPDATE agents SET owner = ?, updated_at_block = ? WHERE agent_id = ?`
-    )
-    .bind(recipient, blockHeight, Number(tokenId))
-    .run();
+  try {
+    await db
+      .prepare(
+        `UPDATE agents SET owner = ?, updated_at_block = ? WHERE agent_id = ?`
+      )
+      .bind(recipient, blockHeight, Number(tokenId))
+      .run();
+  } catch (err) {
+    logger.error("handleTransfer: db write failed", {
+      tokenId,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }

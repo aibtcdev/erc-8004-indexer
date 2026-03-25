@@ -101,5 +101,14 @@ export async function handleRollback(
       .bind(blockHeight, txHash),
   ];
 
-  await db.batch(stmts);
+  try {
+    await db.batch(stmts);
+  } catch (err) {
+    logger.error("handleRollback: batch failed", {
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }

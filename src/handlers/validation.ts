@@ -32,16 +32,27 @@ export async function handleValidationRequest(
     txHash,
   });
 
-  await db
-    .prepare(
-      `INSERT INTO validation_requests
-         (request_hash, agent_id, validator, request_uri, has_response,
-          created_at_block, created_at_tx)
-       VALUES (?, ?, ?, ?, 0, ?, ?)
-       ON CONFLICT(request_hash) DO NOTHING`
-    )
-    .bind(requestHash, Number(agentId), validator, requestUri, blockHeight, txHash)
-    .run();
+  try {
+    await db
+      .prepare(
+        `INSERT INTO validation_requests
+           (request_hash, agent_id, validator, request_uri, has_response,
+            created_at_block, created_at_tx)
+         VALUES (?, ?, ?, ?, 0, ?, ?)
+         ON CONFLICT(request_hash) DO NOTHING`
+      )
+      .bind(requestHash, Number(agentId), validator, requestUri, blockHeight, txHash)
+      .run();
+  } catch (err) {
+    logger.error("handleValidationRequest: db write failed", {
+      requestHash,
+      agentId,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }
 
 /**
@@ -68,18 +79,28 @@ export async function handleValidationResponse(
     txHash,
   });
 
-  await db
-    .prepare(
-      `UPDATE validation_requests
-       SET has_response = 1,
-           response = ?,
-           response_uri = ?,
-           response_hash = ?,
-           tag = ?,
-           responded_at_block = ?,
-           responded_at_tx = ?
-       WHERE request_hash = ?`
-    )
-    .bind(response, responseUri, responseHash, tag, blockHeight, txHash, requestHash)
-    .run();
+  try {
+    await db
+      .prepare(
+        `UPDATE validation_requests
+         SET has_response = 1,
+             response = ?,
+             response_uri = ?,
+             response_hash = ?,
+             tag = ?,
+             responded_at_block = ?,
+             responded_at_tx = ?
+         WHERE request_hash = ?`
+      )
+      .bind(response, responseUri, responseHash, tag, blockHeight, txHash, requestHash)
+      .run();
+  } catch (err) {
+    logger.error("handleValidationResponse: db write failed", {
+      requestHash,
+      blockHeight,
+      txHash,
+      error: String(err),
+    });
+    throw err;
+  }
 }

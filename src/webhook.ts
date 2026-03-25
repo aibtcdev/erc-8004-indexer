@@ -80,6 +80,7 @@ export async function webhookRoute(
   c: Context<{ Bindings: Env; Variables: AppVariables }>
 ): Promise<Response> {
   const logger = c.var.logger;
+  const startMs = Date.now();
 
   // --- 1. Bearer token authentication ---
   const authHeader = c.req.header("Authorization");
@@ -92,8 +93,9 @@ export async function webhookRoute(
   if (secret !== null) {
     // Secret is configured — enforce it
     if (!token || token !== secret) {
-      logger.warn("webhookRoute: unauthorized request", {
+      logger.error("webhookRoute: unauthorized request", {
         hasToken: !!token,
+        path: "auth",
       });
       return c.json({ error: "Unauthorized" }, 401);
     }
@@ -125,6 +127,8 @@ export async function webhookRoute(
   // --- 3. Process apply blocks ---
   // Track which contracts appeared and the last block seen per contract
   const contractLastBlock = new Map<string, { height: number; txHash: string | null }>();
+  let eventsReceived = 0;
+  let eventsProcessed = 0;
 
   for (const block of payload.event?.apply ?? []) {
     const blockHeight = block.block_identifier.index;
@@ -147,6 +151,8 @@ export async function webhookRoute(
           continue;
         }
 
+        eventsReceived++;
+
         try {
           const handled = await routeEvent(
             db,
@@ -155,7 +161,9 @@ export async function webhookRoute(
             txHash,
             logger
           );
-          if (!handled) {
+          if (handled) {
+            eventsProcessed++;
+          } else {
             logger.debug("webhookRoute: event not routed", {
               contractId,
               repr: value.repr.slice(0, 100),
@@ -181,6 +189,7 @@ export async function webhookRoute(
   }
 
   // --- 4. Process rollback blocks ---
+  const rollbackCount = payload.event?.rollback?.length ?? 0;
   for (const block of payload.event?.rollback ?? []) {
     const blockHeight = block.block_identifier.index;
 
@@ -210,6 +219,15 @@ export async function webhookRoute(
       });
     }
   }
+
+  // --- 6. Summary log ---
+  logger.info("webhookRoute: completed", {
+    blockCount: payload.event?.apply?.length ?? 0,
+    rollbackCount,
+    eventsReceived,
+    eventsProcessed,
+    duration_ms: Date.now() - startMs,
+  });
 
   return c.json({ ok: true }, 200);
 }
