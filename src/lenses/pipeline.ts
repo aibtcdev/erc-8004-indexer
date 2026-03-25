@@ -233,23 +233,22 @@ export async function runLensPipeline(
     return Math.exp((-LN2 * ageBlocks) / decay.half_life_blocks);
   });
 
-  // ── Step 5: Reviewer weight (reserved) ─────────────────────────────────
-  // weight.enabled and weight.weight_by_reviewer_score are reserved for future
-  // implementation. Currently all reviewers have multiplier 1.0.
-  const reviewerWeights: number[] = activeFeedback.map(() => 1.0);
-
-  // ── Step 6: Aggregate ───────────────────────────────────────────────────
+  // ── Step 5: Aggregate ────────────────────────────────────────────────────
   // Weighted average using floating-point arithmetic (final score in WAD scale).
   // We compute: score = sum(wad_value_i * w_i) / sum(w_i)
   // To preserve precision with large WAD integers, we scale by 1e-18 for
   // intermediate float math and then scale back.
+  //
+  // Note: weight.enabled / weight.weight_by_reviewer_score (Step 5 in spec)
+  // are reserved for future implementation. Currently all reviewers have
+  // multiplier 1.0, so decay weight alone determines w_i.
   const WAD_SCALE = 1e18;
   let weightedSum = 0;
   let totalWeight = 0;
 
   for (let i = 0; i < activeFeedback.length; i++) {
     const wadFloat = Number(parseBigInt(activeFeedback[i].wad_value)) / WAD_SCALE;
-    const w = weights[i] * reviewerWeights[i];
+    const w = weights[i];
     weightedSum += wadFloat * w;
     totalWeight += w;
   }
