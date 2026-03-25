@@ -31,15 +31,22 @@ const MIN_LIMIT = 1;
 const MIN_OFFSET = 0;
 
 /**
- * Parse limit and offset from URL search params.
+ * Parse limit and offset from query parameters.
+ * Accepts either a plain record (from Hono's c.req.query()) or URLSearchParams.
  * Applies defaults and enforces min/max constraints.
  */
-export function parsePagination(searchParams: URLSearchParams): PaginationParams {
-  const rawLimit = searchParams.get("limit");
-  const rawOffset = searchParams.get("offset");
+export function parsePagination(
+  params: Record<string, string | undefined> | URLSearchParams
+): PaginationParams {
+  const rawLimit = params instanceof URLSearchParams
+    ? params.get("limit")
+    : params.limit;
+  const rawOffset = params instanceof URLSearchParams
+    ? params.get("offset")
+    : params.offset;
 
   let limit = DEFAULT_LIMIT;
-  if (rawLimit !== null) {
+  if (rawLimit != null) {
     const parsed = parseInt(rawLimit, 10);
     if (!isNaN(parsed)) {
       limit = Math.max(MIN_LIMIT, Math.min(MAX_LIMIT, parsed));
@@ -47,7 +54,7 @@ export function parsePagination(searchParams: URLSearchParams): PaginationParams
   }
 
   let offset = MIN_OFFSET;
-  if (rawOffset !== null) {
+  if (rawOffset != null) {
     const parsed = parseInt(rawOffset, 10);
     if (!isNaN(parsed)) {
       offset = Math.max(MIN_OFFSET, parsed);

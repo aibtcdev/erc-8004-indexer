@@ -20,7 +20,7 @@ export const agentsRoute = new Hono<{
 
 // GET /agents — list all agents with pagination
 agentsRoute.get("/agents", async (c) => {
-  const pagination = parsePagination(new URLSearchParams(c.req.query()));
+  const pagination = parsePagination(c.req.query());
   const { rows, total } = await queryAgents(c.env.DB, pagination);
   return c.json(paginatedResponse(rows, total, pagination.limit, pagination.offset));
 });

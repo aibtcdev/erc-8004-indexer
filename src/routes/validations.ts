@@ -34,7 +34,7 @@ validationsRoute.get("/agents/:id/validations/summary", async (c) => {
 validationsRoute.get("/agents/:id/validations", async (c) => {
   const agentId = parseAgentId(c);
   if (agentId === null) return c.json({ error: "Invalid agent ID" }, 400);
-  const pagination = parsePagination(new URLSearchParams(c.req.query()));
+  const pagination = parsePagination(c.req.query());
   const rawHasResponse = c.req.query("has_response");
   let has_response: boolean | undefined;
   if (rawHasResponse === "true") has_response = true;
@@ -53,7 +53,7 @@ validationsRoute.get("/validators/:addr/requests", async (c) => {
   if (!validator) {
     return c.json({ error: "Invalid validator address" }, 400);
   }
-  const pagination = parsePagination(new URLSearchParams(c.req.query()));
+  const pagination = parsePagination(c.req.query());
   const { rows, total } = await queryValidationsByValidator(
     c.env.DB,
     validator,

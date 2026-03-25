@@ -39,7 +39,7 @@ feedbackRoute.get("/agents/:id/summary", async (c) => {
 feedbackRoute.get("/agents/:id/feedback", async (c) => {
   const agentId = parseAgentId(c);
   if (agentId === null) return c.json({ error: "Invalid agent ID" }, 400);
-  const pagination = parsePagination(new URLSearchParams(c.req.query()));
+  const pagination = parsePagination(c.req.query());
   const filters = parseFeedbackFilters(c);
   const { rows, total } = await queryFeedback(c.env.DB, agentId, {
     ...pagination,
@@ -86,7 +86,7 @@ feedbackRoute.get("/agents/:id/feedback/:client/:index/responses", async (c) => 
 
 // GET /feedback/recent — recent feedback across all agents with pagination
 feedbackRoute.get("/feedback/recent", async (c) => {
-  const pagination = parsePagination(new URLSearchParams(c.req.query()));
+  const pagination = parsePagination(c.req.query());
   const { rows, total } = await queryRecentFeedback(c.env.DB, pagination);
   return c.json(paginatedResponse(rows, total, pagination.limit, pagination.offset));
 });
