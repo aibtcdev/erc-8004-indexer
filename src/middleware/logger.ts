@@ -1,7 +1,7 @@
 import type { Context, Next } from "hono";
 import type { Env, Logger, LogsRPC, AppVariables } from "../types";
 
-const APP_ID = "erc-8004-indexer";
+const APP_ID = "erc8004-indexer";
 
 /**
  * Type guard to check if LOGS binding has required RPC methods
