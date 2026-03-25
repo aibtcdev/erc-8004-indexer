@@ -144,11 +144,13 @@ export interface SyncStateRow {
 
 /**
  * Row from the `lenses` table.
- * Registry of named reputation lens aggregations (stub for Phase 6).
+ * Registry of named reputation lens aggregations with full configuration.
  */
 export interface LensRow {
   id: number;
   name: string;
   description: string | null;
+  /** JSON-encoded LensConfig */
+  config: string;
   created_at: string;
 }
