@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { VERSION } from "./version";
 import type { Env, AppVariables } from "./types";
 import { loggerMiddleware } from "./middleware/logger";
+import { webhookRoute } from "./webhook";
 
 // Create Hono app with type safety
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -29,6 +30,9 @@ app.get("/", (c) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Chainhooks 2.0 webhook receiver
+app.post("/webhook", webhookRoute);
 
 // 404 handler
 app.notFound((c) => {
