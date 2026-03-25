@@ -69,3 +69,15 @@ export function mergeLensConfig(partial: Partial<LensConfig>): LensConfig {
     weight: { ...DEFAULT_WEIGHT, ...(partial.weight ?? {}) },
   };
 }
+
+/**
+ * Parse a JSON config string into a fully-merged LensConfig.
+ * Returns the default config on parse failure.
+ */
+export function parseLensConfig(configJson: string): LensConfig {
+  try {
+    return mergeLensConfig(JSON.parse(configJson) as Partial<LensConfig>);
+  } catch {
+    return mergeLensConfig({});
+  }
+}

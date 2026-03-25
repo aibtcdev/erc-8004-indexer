@@ -11,6 +11,7 @@ import {
   queryAgentById,
   queryAgentMetadata,
 } from "../utils/query";
+import { parseAgentId } from "./helpers";
 
 export const agentsRoute = new Hono<{
   Bindings: Env;
@@ -26,23 +27,17 @@ agentsRoute.get("/agents", async (c) => {
 
 // GET /agents/:id — get agent by numeric ID
 agentsRoute.get("/agents/:id", async (c) => {
-  const agentId = parseInt(c.req.param("id"), 10);
-  if (isNaN(agentId)) {
-    return c.json({ error: "Invalid agent ID" }, 400);
-  }
+  const agentId = parseAgentId(c);
+  if (agentId === null) return c.json({ error: "Invalid agent ID" }, 400);
   const agent = await queryAgentById(c.env.DB, agentId);
-  if (!agent) {
-    return c.json({ error: "Not Found" }, 404);
-  }
+  if (!agent) return c.json({ error: "Not Found" }, 404);
   return c.json(agent);
 });
 
 // GET /agents/:id/metadata — list all metadata entries for an agent
 agentsRoute.get("/agents/:id/metadata", async (c) => {
-  const agentId = parseInt(c.req.param("id"), 10);
-  if (isNaN(agentId)) {
-    return c.json({ error: "Invalid agent ID" }, 400);
-  }
+  const agentId = parseAgentId(c);
+  if (agentId === null) return c.json({ error: "Invalid agent ID" }, 400);
   const metadata = await queryAgentMetadata(c.env.DB, agentId);
   return c.json(metadata);
 });

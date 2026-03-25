@@ -18,8 +18,9 @@ import {
   updateLens,
 } from "../utils/query";
 import { runLensPipeline } from "../lenses/pipeline";
-import { mergeLensConfig } from "../lenses/defaults";
+import { mergeLensConfig, parseLensConfig } from "../lenses/defaults";
 import type { LensConfig } from "../lenses/types";
+import { parseAgentId, parseBlockParam } from "./helpers";
 
 export const lensesRoute = new Hono<{
   Bindings: Env;
@@ -53,19 +54,6 @@ async function isAdminAuthorized(
   return false;
 }
 
-/**
- * Parse the lens config JSON from a LensRow.config string.
- * Returns a merged LensConfig (filling defaults for any missing fields).
- */
-function parseLensConfig(configJson: string): LensConfig {
-  try {
-    const parsed = JSON.parse(configJson) as Partial<LensConfig>;
-    return mergeLensConfig(parsed);
-  } catch {
-    return mergeLensConfig({});
-  }
-}
-
 // ── Read endpoints ────────────────────────────────────────────────────────────
 
 // GET /lenses — list all lenses
@@ -97,104 +85,57 @@ lensesRoute.get("/lenses/:lens", async (c) => {
   });
 });
 
+type LensPipelineSuccess = { ok: true; result: Awaited<ReturnType<typeof runLensPipeline>> };
+type LensPipelineFailure = { ok: false; error: string; status: 400 | 404 };
+
+/**
+ * Shared helper: validate agent ID, look up lens, parse config, run pipeline.
+ */
+async function resolveLensPipeline(
+  c: import("hono").Context<{ Bindings: Env; Variables: AppVariables }>
+): Promise<LensPipelineSuccess | LensPipelineFailure> {
+  const agentId = parseAgentId(c);
+  if (agentId === null) return { ok: false, error: "Invalid agent ID", status: 400 };
+
+  const lensName = c.req.param("lens") ?? "";
+  const row = await queryLensByName(c.env.DB, lensName);
+  if (!row) return { ok: false, error: "Lens not found", status: 404 };
+
+  const config = parseLensConfig(row.config);
+  const currentBlock = parseBlockParam(c);
+  const result = await runLensPipeline(c.env.DB, agentId, lensName, config, currentBlock);
+  return { ok: true, result };
+}
+
 // GET /lenses/:lens/agents/:id/summary — full pipeline result
 lensesRoute.get("/lenses/:lens/agents/:id/summary", async (c) => {
-  const lensName = c.req.param("lens");
-  const agentId = parseInt(c.req.param("id"), 10);
-  if (isNaN(agentId)) {
-    return c.json({ error: "Invalid agent ID" }, 400);
-  }
-
-  const row = await queryLensByName(c.env.DB, lensName);
-  if (!row) {
-    return c.json({ error: "Lens not found" }, 404);
-  }
-
-  const config = parseLensConfig(row.config);
-
-  // Use query param `block` as current block; default to a large sentinel
-  const blockParam = c.req.query("block");
-  const currentBlock = blockParam ? parseInt(blockParam, 10) : 999999999;
-
-  const result = await runLensPipeline(
-    c.env.DB,
-    agentId,
-    lensName,
-    config,
-    isNaN(currentBlock) ? 999999999 : currentBlock
-  );
-
-  return c.json(result);
+  const resolved = await resolveLensPipeline(c);
+  if (!resolved.ok) return c.json({ error: resolved.error }, resolved.status);
+  return c.json(resolved.result);
 });
 
-// GET /lenses/:lens/agents/:id/feedback — list feedback that passes lens filters
-// Returns transparency metadata alongside the list.
+// GET /lenses/:lens/agents/:id/feedback — transparency metadata for lens filtering
 lensesRoute.get("/lenses/:lens/agents/:id/feedback", async (c) => {
-  const lensName = c.req.param("lens");
-  const agentId = parseInt(c.req.param("id"), 10);
-  if (isNaN(agentId)) {
-    return c.json({ error: "Invalid agent ID" }, 400);
-  }
-
-  const row = await queryLensByName(c.env.DB, lensName);
-  if (!row) {
-    return c.json({ error: "Lens not found" }, 404);
-  }
-
-  const config = parseLensConfig(row.config);
-  const blockParam = c.req.query("block");
-  const currentBlock = blockParam ? parseInt(blockParam, 10) : 999999999;
-
-  // Run pipeline to get filtered entries + metadata
-  const result = await runLensPipeline(
-    c.env.DB,
-    agentId,
-    lensName,
-    config,
-    isNaN(currentBlock) ? 999999999 : currentBlock
-  );
-
-  // Re-fetch the included feedback IDs by running pipeline again with full data
-  // For this endpoint we return the metadata alongside the score
+  const resolved = await resolveLensPipeline(c);
+  if (!resolved.ok) return c.json({ error: resolved.error }, resolved.status);
   return c.json({
-    agent_id: agentId,
-    lens_name: lensName,
-    included_count: result.included_count,
-    excluded_count: result.excluded_count,
-    exclusions: result.exclusions,
-    flags: result.flags,
+    agent_id: resolved.result.agent_id,
+    lens_name: resolved.result.lens_name,
+    included_count: resolved.result.included_count,
+    excluded_count: resolved.result.excluded_count,
+    exclusions: resolved.result.exclusions,
+    flags: resolved.result.flags,
   });
 });
 
 // GET /lenses/:lens/agents/:id/score — just the score
 lensesRoute.get("/lenses/:lens/agents/:id/score", async (c) => {
-  const lensName = c.req.param("lens");
-  const agentId = parseInt(c.req.param("id"), 10);
-  if (isNaN(agentId)) {
-    return c.json({ error: "Invalid agent ID" }, 400);
-  }
-
-  const row = await queryLensByName(c.env.DB, lensName);
-  if (!row) {
-    return c.json({ error: "Lens not found" }, 404);
-  }
-
-  const config = parseLensConfig(row.config);
-  const blockParam = c.req.query("block");
-  const currentBlock = blockParam ? parseInt(blockParam, 10) : 999999999;
-
-  const result = await runLensPipeline(
-    c.env.DB,
-    agentId,
-    lensName,
-    config,
-    isNaN(currentBlock) ? 999999999 : currentBlock
-  );
-
+  const resolved = await resolveLensPipeline(c);
+  if (!resolved.ok) return c.json({ error: resolved.error }, resolved.status);
   return c.json({
-    agent_id: agentId,
-    lens_name: lensName,
-    score: result.score,
+    agent_id: resolved.result.agent_id,
+    lens_name: resolved.result.lens_name,
+    score: resolved.result.score,
   });
 });
 

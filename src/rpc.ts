@@ -19,7 +19,7 @@ import {
 } from "./utils/query";
 import { paginatedResponse, type PaginatedResponse } from "./utils/pagination";
 import { runLensPipeline, type LensPipelineResult } from "./lenses/pipeline";
-import { mergeLensConfig } from "./lenses/defaults";
+import { parseLensConfig } from "./lenses/defaults";
 
 /**
  * IndexerRPC — WorkerEntrypoint for service bindings from other workers.
@@ -157,12 +157,7 @@ export class IndexerRPC extends WorkerEntrypoint<Env> {
   ): Promise<LensPipelineResult | null> {
     const row = await queryLensByName(this.env.DB, lensName);
     if (!row) return null;
-    let config;
-    try {
-      config = mergeLensConfig(JSON.parse(row.config));
-    } catch {
-      config = mergeLensConfig({});
-    }
+    const config = parseLensConfig(row.config);
     return runLensPipeline(this.env.DB, agentId, lensName, config, currentBlock);
   }
 

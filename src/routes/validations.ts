@@ -15,6 +15,7 @@ import {
   queryValidationsByValidator,
   queryValidationByHash,
 } from "../utils/query";
+import { parseAgentId } from "./helpers";
 
 export const validationsRoute = new Hono<{
   Bindings: Env;
@@ -23,28 +24,21 @@ export const validationsRoute = new Hono<{
 
 // GET /agents/:id/validations/summary — counts of total/pending/responded
 validationsRoute.get("/agents/:id/validations/summary", async (c) => {
-  const agentId = parseInt(c.req.param("id"), 10);
-  if (isNaN(agentId)) {
-    return c.json({ error: "Invalid agent ID" }, 400);
-  }
+  const agentId = parseAgentId(c);
+  if (agentId === null) return c.json({ error: "Invalid agent ID" }, 400);
   const summary = await queryValidationSummary(c.env.DB, agentId);
   return c.json({ agent_id: agentId, ...summary });
 });
 
 // GET /agents/:id/validations — list validation requests for an agent
 validationsRoute.get("/agents/:id/validations", async (c) => {
-  const agentId = parseInt(c.req.param("id"), 10);
-  if (isNaN(agentId)) {
-    return c.json({ error: "Invalid agent ID" }, 400);
-  }
+  const agentId = parseAgentId(c);
+  if (agentId === null) return c.json({ error: "Invalid agent ID" }, 400);
   const pagination = parsePagination(new URLSearchParams(c.req.query()));
   const rawHasResponse = c.req.query("has_response");
-  const has_response =
-    rawHasResponse === "true"
-      ? true
-      : rawHasResponse === "false"
-        ? false
-        : undefined;
+  let has_response: boolean | undefined;
+  if (rawHasResponse === "true") has_response = true;
+  else if (rawHasResponse === "false") has_response = false;
 
   const { rows, total } = await queryValidations(c.env.DB, agentId, {
     ...pagination,
