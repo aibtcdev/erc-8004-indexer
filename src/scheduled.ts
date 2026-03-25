@@ -11,13 +11,15 @@
  *
  * Note: evaluateChainhook() processes a single block per call.
  * Results arrive asynchronously via the /webhook endpoint.
+ *
+ * ChainhooksClient is dynamically imported to avoid pulling undici (a Node.js
+ * HTTP client) into the Workers bundle, which is incompatible with the CF
+ * Workers runtime and breaks vitest-pool-workers test execution.
  */
 
-import {
-  ChainhooksClient,
-  CHAINHOOKS_BASE_URL,
-  type EvaluateChainhookRequest,
-  type ChainhookNetwork,
+import type {
+  ChainhookNetwork,
+  EvaluateChainhookRequest,
 } from "@hirosystems/chainhooks-client";
 import type { Env, Logger, LogsRPC } from "./types";
 
@@ -151,7 +153,13 @@ export async function scheduledHandler(
   const network: ChainhookNetwork =
     env.ENVIRONMENT === "production" ? "mainnet" : "testnet";
 
-  // Step 4: Fetch chainhook status
+  // Step 4: Dynamically import ChainhooksClient to keep it out of the static
+  // module graph — avoids loading undici in the Workers/vitest environment.
+  const { ChainhooksClient, CHAINHOOKS_BASE_URL } = await import(
+    "@hirosystems/chainhooks-client"
+  );
+
+  // Step 5: Fetch chainhook status
   const baseUrl = CHAINHOOKS_BASE_URL[network];
   const client = new ChainhooksClient({ baseUrl, apiKey });
 
@@ -173,7 +181,7 @@ export async function scheduledHandler(
     occurrence_count: status.occurrence_count,
   });
 
-  // Step 5: Alert if unhealthy
+  // Step 6: Alert if unhealthy
   if (!status.enabled || status.status !== "streaming") {
     logger.warn("Chainhook is not healthy", {
       uuid,
@@ -189,14 +197,14 @@ export async function scheduledHandler(
     return;
   }
 
-  // Step 6: Fetch current Stacks block height
+  // Step 7: Fetch current Stacks block height
   const currentBlock = await fetchCurrentBlockHeight(network);
   if (currentBlock === null) {
     logger.error("Failed to fetch current Stacks block height", { network });
     return;
   }
 
-  // Step 7: Query sync_state for max last_indexed_block
+  // Step 8: Query sync_state for max last_indexed_block
   const syncRow = await env.DB.prepare(
     "SELECT MAX(last_indexed_block) AS max_block FROM sync_state"
   ).first<{ max_block: number | null }>();
@@ -211,7 +219,7 @@ export async function scheduledHandler(
     return;
   }
 
-  // Step 8: Calculate and log gap
+  // Step 9: Calculate and log gap
   const gap = currentBlock - lastIndexedBlock;
   logger.info("gap_check", {
     current_block: currentBlock,
@@ -220,7 +228,7 @@ export async function scheduledHandler(
     network,
   });
 
-  // Step 9: Alert on large gap
+  // Step 10: Alert on large gap
   if (gap > GAP_ALERT_THRESHOLD) {
     logger.warn("large_gap_detected", {
       gap,
@@ -230,7 +238,7 @@ export async function scheduledHandler(
     });
   }
 
-  // Step 10: Trigger backfill if gap exceeds threshold
+  // Step 11: Trigger backfill if gap exceeds threshold
   if (gap > GAP_BACKFILL_THRESHOLD) {
     const fromBlock = lastIndexedBlock + 1;
     // Cap at BACKFILL_BATCH_SIZE blocks per cron run to avoid timeout
