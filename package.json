@@ -15,7 +15,8 @@
     "register": "tsx --tsconfig tsconfig.scripts.json scripts/register-chainhooks.ts",
     "check-chainhook": "tsx --tsconfig tsconfig.scripts.json scripts/check-chainhook.ts",
     "rotate-secret": "tsx --tsconfig tsconfig.scripts.json scripts/rotate-secret.ts",
-    "register-logs-app": "set -a && . ./.env && set +a && tsx --tsconfig tsconfig.scripts.json scripts/register-worker-logs-app.ts"
+    "register-logs-app": "set -a && . ./.env && set +a && tsx --tsconfig tsconfig.scripts.json scripts/register-worker-logs-app.ts",
+    "backfill": "set -a && . ./.env && set +a && tsx --tsconfig tsconfig.scripts.json scripts/backfill.ts"
   },
   "dependencies": {
     "@hirosystems/chainhooks-client": "^2.1.1",
