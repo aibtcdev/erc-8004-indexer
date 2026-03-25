@@ -56,6 +56,12 @@ async function fetchCurrentBlockHeight(
   }
 }
 
+function getUnhealthyHint(status: string): string {
+  if (status === "expired") return "Re-register with: npm run register";
+  if (status === "interrupted") return "Check Chainhooks API for details";
+  return "Enable via Chainhooks API";
+}
+
 // ── Scheduled handler ─────────────────────────────────────────────────────────
 
 export async function scheduledHandler(
@@ -121,12 +127,7 @@ export async function scheduledHandler(
       uuid,
       enabled: status.enabled,
       status: status.status,
-      hint:
-        status.status === "expired"
-          ? "Re-register with: npm run register"
-          : status.status === "interrupted"
-            ? "Check Chainhooks API for details"
-            : "Enable via Chainhooks API",
+      hint: getUnhealthyHint(status.status),
     });
     return;
   }

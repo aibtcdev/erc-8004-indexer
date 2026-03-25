@@ -12,11 +12,7 @@ type AppContext = Context<{ Bindings: Env; Variables: AppVariables }>;
  */
 export function parseAgentId(c: AppContext): number | null {
   const agentId = parseInt(c.req.param("id") ?? "", 10);
-  if (isNaN(agentId)) {
-    c.status(400);
-    return null;
-  }
-  return agentId;
+  return isNaN(agentId) ? null : agentId;
 }
 
 /**
