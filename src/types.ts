@@ -47,6 +47,8 @@ export interface Env {
   LOGS?: unknown;
   // Deployment environment identifier
   ENVIRONMENT?: string;
+  // Admin token for lens management endpoints (POST /lenses, PUT /lenses/:lens)
+  ADMIN_TOKEN?: string;
 }
 
 /**

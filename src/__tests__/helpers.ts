@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS lenses (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   name        TEXT    NOT NULL UNIQUE,
   description TEXT,
+  config      TEXT    NOT NULL DEFAULT '{}',
   created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 `;
@@ -183,4 +184,22 @@ export async function clearData(db: D1Database): Promise<void> {
   for (const table of tables) {
     await db.prepare(`DELETE FROM ${table}`).run();
   }
+}
+
+/**
+ * Seed the reference "aibtc" lens into the lenses table.
+ * Must be called after clearData() in lens-related tests, since clearData()
+ * wipes all rows including seeded lenses.
+ */
+export async function seedLenses(db: D1Database): Promise<void> {
+  await db
+    .prepare(
+      `INSERT OR IGNORE INTO lenses (name, description, config) VALUES (?, ?, ?)`
+    )
+    .bind(
+      "aibtc",
+      "AIBTC ecosystem reference lens: approved clients only, \u00b1100 WAD bounds, rate-limited (10/day), 30-day decay.",
+      '{"trust":{"approved_clients_only":true,"min_feedback_count_per_reviewer":1},"bounds":{"min_wad_value":"-100000000000000000000","max_wad_value":"100000000000000000000"},"rate":{"max_per_reviewer_per_window":10,"window_blocks":144},"decay":{"enabled":true,"half_life_blocks":4320},"weight":{"enabled":false,"weight_by_reviewer_score":false}}'
+    )
+    .run();
 }

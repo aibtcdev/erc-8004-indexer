@@ -9,6 +9,7 @@ import { agentsRoute } from "./routes/agents";
 import { feedbackRoute } from "./routes/feedback";
 import { validationsRoute } from "./routes/validations";
 import { statusRoute } from "./routes/status";
+import { lensesRoute } from "./routes/lenses";
 
 // Export IndexerRPC WorkerEntrypoint so other workers can bind to it
 export { IndexerRPC } from "./rpc";
@@ -46,11 +47,12 @@ app.get("/", (c) => {
 // Chainhooks 2.0 webhook receiver
 app.post("/webhook", webhookRoute);
 
-// REST API v1 — agents, feedback, validations, status
+// REST API v1 — agents, feedback, validations, status, lenses
 app.route("/api/v1", agentsRoute);
 app.route("/api/v1", feedbackRoute);
 app.route("/api/v1", validationsRoute);
 app.route("/api/v1", statusRoute);
+app.route("/api/v1", lensesRoute);
 
 // 404 handler
 app.notFound((c) => {
