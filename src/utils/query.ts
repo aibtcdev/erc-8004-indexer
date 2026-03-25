@@ -13,6 +13,7 @@ import type {
   FeedbackResponseRow,
   ValidationRequestRow,
   SyncStateRow,
+  LensRow,
 } from "../types/db";
 
 // ============================================================
@@ -423,4 +424,50 @@ export async function querySyncState(db: D1Database): Promise<SyncStateRow[]> {
     .prepare("SELECT * FROM sync_state ORDER BY contract_id ASC")
     .all<SyncStateRow>();
   return result.results ?? [];
+}
+
+// ============================================================
+// Lenses
+// ============================================================
+
+export async function queryLenses(db: D1Database): Promise<LensRow[]> {
+  const result = await db
+    .prepare("SELECT * FROM lenses ORDER BY name ASC")
+    .all<LensRow>();
+  return result.results ?? [];
+}
+
+export async function queryLensByName(
+  db: D1Database,
+  name: string
+): Promise<LensRow | null> {
+  return db
+    .prepare("SELECT * FROM lenses WHERE name = ?")
+    .bind(name)
+    .first<LensRow>();
+}
+
+export async function createLens(
+  db: D1Database,
+  name: string,
+  description: string | null,
+  config: string
+): Promise<void> {
+  await db
+    .prepare(
+      "INSERT INTO lenses (name, description, config) VALUES (?, ?, ?)"
+    )
+    .bind(name, description, config)
+    .run();
+}
+
+export async function updateLens(
+  db: D1Database,
+  name: string,
+  config: string
+): Promise<void> {
+  await db
+    .prepare("UPDATE lenses SET config = ? WHERE name = ?")
+    .bind(config, name)
+    .run();
 }
