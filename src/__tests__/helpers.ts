@@ -162,3 +162,25 @@ export async function setupDb(db: D1Database): Promise<void> {
     await db.prepare(sql).run();
   }
 }
+
+/**
+ * Delete all rows from all tables, preserving schema.
+ * Useful in test setups to ensure a clean state between test groups
+ * that each call setupDb() but share the same D1 binding instance.
+ */
+export async function clearData(db: D1Database): Promise<void> {
+  const tables = [
+    "feedback_responses",
+    "feedback",
+    "client_approvals",
+    "approvals",
+    "agent_metadata",
+    "validation_requests",
+    "sync_state",
+    "lenses",
+    "agents",
+  ];
+  for (const table of tables) {
+    await db.prepare(`DELETE FROM ${table}`).run();
+  }
+}

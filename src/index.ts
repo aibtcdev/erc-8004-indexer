@@ -10,6 +10,9 @@ import { feedbackRoute } from "./routes/feedback";
 import { validationsRoute } from "./routes/validations";
 import { statusRoute } from "./routes/status";
 
+// Export IndexerRPC WorkerEntrypoint so other workers can bind to it
+export { IndexerRPC } from "./rpc";
+
 // Create Hono app with type safety
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
