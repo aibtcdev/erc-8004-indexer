@@ -11,7 +11,10 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "cf-typegen": "npm run wrangler -- types"
+    "cf-typegen": "npm run wrangler -- types",
+    "register": "tsx --tsconfig tsconfig.scripts.json scripts/register-chainhooks.ts",
+    "check-chainhook": "tsx --tsconfig tsconfig.scripts.json scripts/check-chainhook.ts",
+    "rotate-secret": "tsx --tsconfig tsconfig.scripts.json scripts/rotate-secret.ts"
   },
   "dependencies": {
     "@hirosystems/chainhooks-client": "^2.1.1",
