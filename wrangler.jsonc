@@ -28,8 +28,8 @@
     { "binding": "LOGS", "service": "worker-logs", "entrypoint": "LogsRPC" }
   ],
 
-  // Cron triggers — health check and gap detection (configured in Phase 8)
-  // "triggers": { "crons": ["*/5 * * * *"] },
+  // Cron triggers — health check and gap detection (every 5 minutes)
+  "triggers": { "crons": ["*/5 * * * *"] },
 
   /**
    * Named environments — override top-level defaults for staging/production deploys.
@@ -55,6 +55,7 @@
       "workers_dev": false,
       "observability": { "enabled": false },
       "routes": [{ "pattern": "erc8004.aibtc.dev", "custom_domain": true }],
+      "triggers": { "crons": ["*/5 * * * *"] },
 
       "d1_databases": [
         {
@@ -79,6 +80,7 @@
       "workers_dev": false,
       "observability": { "enabled": false },
       "routes": [{ "pattern": "erc8004.aibtc.com", "custom_domain": true }],
+      "triggers": { "crons": ["*/5 * * * *"] },
 
       "d1_databases": [
         {
