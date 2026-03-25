@@ -1,0 +1,66 @@
+{
+  "chainhook": {
+    "uuid": "test-uuid-validation",
+    "name": "erc8004-validation"
+  },
+  "event": {
+    "chain": "stacks",
+    "network": "mainnet",
+    "apply": [
+      {
+        "block_identifier": { "index": 102, "hash": "0xblock102" },
+        "parent_block_identifier": { "index": 101, "hash": "0xblock101" },
+        "timestamp": 1700001200,
+        "metadata": {
+          "canonical": true,
+          "burn_block_identifier": { "index": 800002, "hash": "0xburn800002" },
+          "burn_block_timestamp": 1700001200,
+          "parent_microblock_identifier": null,
+          "tenure_height": 102,
+          "execution_cost": { "read_count": 0, "read_length": 0, "runtime": 0, "write_count": 0, "write_length": 0 },
+          "tx_total_size": 0,
+          "tx_count": 2
+        },
+        "transactions": [
+          {
+            "transaction_identifier": { "hash": "0xtx_validationrequest" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.validation-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"validation-registry/ValidationRequest\", payload: {validator: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE, agent-id: u1, request-hash: 0x1234567890123456789012345678901234567890123456789012345678901234, request-uri: \"https://example.com/request/1\"}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "transaction_identifier": { "hash": "0xtx_validationresponse" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.validation-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"validation-registry/ValidationResponse\", payload: {request-hash: 0x1234567890123456789012345678901234567890123456789012345678901234, response: u1, tag: \"approved\", response-uri: \"https://example.com/response/1\", response-hash: 0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890}}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "rollback": []
+  }
+}
