@@ -65,6 +65,20 @@ export function parsePagination(
 }
 
 /**
+ * Clamp raw numeric limit/offset values to valid pagination bounds.
+ * Useful for RPC methods that receive numbers directly (not query strings).
+ */
+export function clampPagination(params: {
+  limit?: number;
+  offset?: number;
+}): PaginationParams {
+  return {
+    limit: Math.max(MIN_LIMIT, Math.min(MAX_LIMIT, params.limit ?? DEFAULT_LIMIT)),
+    offset: Math.max(MIN_OFFSET, params.offset ?? MIN_OFFSET),
+  };
+}
+
+/**
  * Build a standard paginated response envelope.
  */
 export function paginatedResponse<T>(

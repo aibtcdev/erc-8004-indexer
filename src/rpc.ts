@@ -17,7 +17,7 @@ import {
   type ValidationSummary,
   type GlobalStats,
 } from "./utils/query";
-import { paginatedResponse, type PaginatedResponse } from "./utils/pagination";
+import { clampPagination, paginatedResponse, type PaginatedResponse } from "./utils/pagination";
 import { runLensPipeline, type LensPipelineResult } from "./lenses/pipeline";
 import { parseLensConfig } from "./lenses/defaults";
 
@@ -83,8 +83,7 @@ export class IndexerRPC extends WorkerEntrypoint<Env> {
     agentId: number,
     params: { limit?: number; offset?: number } & FeedbackFilters = {}
   ): Promise<PaginatedResponse<FeedbackRow>> {
-    const limit = Math.max(1, Math.min(200, params.limit ?? 50));
-    const offset = Math.max(0, params.offset ?? 0);
+    const { limit, offset } = clampPagination(params);
     const { rows, total } = await queryFeedback(this.env.DB, agentId, {
       limit,
       offset,
@@ -117,8 +116,7 @@ export class IndexerRPC extends WorkerEntrypoint<Env> {
       has_response?: boolean;
     } = {}
   ): Promise<PaginatedResponse<ValidationRequestRow>> {
-    const limit = Math.max(1, Math.min(200, params.limit ?? 50));
-    const offset = Math.max(0, params.offset ?? 0);
+    const { limit, offset } = clampPagination(params);
     const { rows, total } = await queryValidations(this.env.DB, agentId, {
       limit,
       offset,
