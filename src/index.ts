@@ -5,6 +5,10 @@ import type { Env, AppVariables } from "./types";
 import { loggerMiddleware } from "./middleware/logger";
 import { requestLoggerMiddleware } from "./middleware/request-logger";
 import { webhookRoute } from "./webhook";
+import { agentsRoute } from "./routes/agents";
+import { feedbackRoute } from "./routes/feedback";
+import { validationsRoute } from "./routes/validations";
+import { statusRoute } from "./routes/status";
 
 // Create Hono app with type safety
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -38,6 +42,12 @@ app.get("/", (c) => {
 
 // Chainhooks 2.0 webhook receiver
 app.post("/webhook", webhookRoute);
+
+// REST API v1 — agents, feedback, validations, status
+app.route("/api/v1", agentsRoute);
+app.route("/api/v1", feedbackRoute);
+app.route("/api/v1", validationsRoute);
+app.route("/api/v1", statusRoute);
 
 // 404 handler
 app.notFound((c) => {
