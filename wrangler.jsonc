@@ -1,0 +1,101 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "erc-8004-indexer",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat_v2"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": { "enabled": false },
+
+  // D1 database — event storage (local dev)
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "erc8004-indexer-local",
+      "database_id": "local",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // KV namespace — indexer state + chainhook IDs (local dev)
+  "kv_namespaces": [
+    { "binding": "INDEXER_KV", "id": "local" }
+  ],
+
+  // Service binding to worker-logs via RPC
+  "services": [
+    { "binding": "LOGS", "service": "worker-logs", "entrypoint": "LogsRPC" }
+  ],
+
+  // Cron triggers — health check and gap detection (configured in Phase 8)
+  // "triggers": { "crons": ["*/5 * * * *"] },
+
+  /**
+   * Named environments — override top-level defaults for staging/production deploys.
+   * All bindings must be explicitly duplicated (not inherited by env blocks).
+   *
+   * One-time staging setup (run with Cloudflare access):
+   *   npx wrangler d1 create erc8004-indexer-staging --env staging
+   *   npx wrangler kv:namespace create INDEXER_KV --env staging
+   *   Then update STAGING_D1_ID_REPLACE_ME and STAGING_KV_ID_REPLACE_ME below.
+   *
+   * One-time production setup:
+   *   npx wrangler d1 create erc8004-indexer-production
+   *   npx wrangler kv:namespace create INDEXER_KV
+   *   Then update PRODUCTION_D1_ID_REPLACE_ME and PRODUCTION_KV_ID_REPLACE_ME below.
+   *
+   * Deploy commands:
+   *   Staging:    npm run deploy:staging
+   *   Production: npm run deploy:production  (or push to main via CI)
+   */
+  "env": {
+    "staging": {
+      "name": "erc-8004-indexer-staging",
+      "workers_dev": false,
+      "observability": { "enabled": false },
+      "routes": [{ "pattern": "erc8004.aibtc.dev", "custom_domain": true }],
+
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "erc8004-indexer-staging",
+          "database_id": "STAGING_D1_ID_REPLACE_ME",
+          "migrations_dir": "migrations"
+        }
+      ],
+
+      "kv_namespaces": [
+        { "binding": "INDEXER_KV", "id": "STAGING_KV_ID_REPLACE_ME" }
+      ],
+
+      "services": [
+        { "binding": "LOGS", "service": "worker-logs-staging", "entrypoint": "LogsRPC" }
+      ]
+    },
+
+    "production": {
+      "name": "erc-8004-indexer",
+      "workers_dev": false,
+      "observability": { "enabled": false },
+      "routes": [{ "pattern": "erc8004.aibtc.com", "custom_domain": true }],
+
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "erc8004-indexer-production",
+          "database_id": "PRODUCTION_D1_ID_REPLACE_ME",
+          "migrations_dir": "migrations"
+        }
+      ],
+
+      "kv_namespaces": [
+        { "binding": "INDEXER_KV", "id": "PRODUCTION_KV_ID_REPLACE_ME" }
+      ],
+
+      "services": [
+        { "binding": "LOGS", "service": "worker-logs-production", "entrypoint": "LogsRPC" }
+      ]
+    }
+  }
+}
