@@ -1,0 +1,102 @@
+{
+  "chainhook": {
+    "uuid": "test-uuid-reputation",
+    "name": "erc8004-reputation"
+  },
+  "event": {
+    "chain": "stacks",
+    "network": "mainnet",
+    "apply": [
+      {
+        "block_identifier": { "index": 101, "hash": "0xblock101" },
+        "parent_block_identifier": { "index": 100, "hash": "0xblock100" },
+        "timestamp": 1700000600,
+        "metadata": {
+          "canonical": true,
+          "burn_block_identifier": { "index": 800001, "hash": "0xburn800001" },
+          "burn_block_timestamp": 1700000600,
+          "parent_microblock_identifier": null,
+          "tenure_height": 101,
+          "execution_cost": { "read_count": 0, "read_length": 0, "runtime": 0, "write_count": 0, "write_length": 0 },
+          "tx_total_size": 0,
+          "tx_count": 4
+        },
+        "transactions": [
+          {
+            "transaction_identifier": { "hash": "0xtx_clientapproved" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.reputation-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"reputation-registry/ClientApproved\", payload: {agent-id: u1, client: SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7, index-limit: u5}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "transaction_identifier": { "hash": "0xtx_newfeedback" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.reputation-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"reputation-registry/NewFeedback\", payload: {agent-id: u1, client: SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7, index: u0, value: 5, value-decimals: u0, tag1: \"quality\", tag2: \"\", endpoint: \"https://api.example.com\", feedback-uri: \"https://example.com/feedback/1\", feedback-hash: 0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "transaction_identifier": { "hash": "0xtx_feedbackrevoked" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.reputation-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"reputation-registry/FeedbackRevoked\", payload: {agent-id: u1, client: SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7, index: u0}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "transaction_identifier": { "hash": "0xtx_responseappended" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.reputation-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"reputation-registry/ResponseAppended\", payload: {agent-id: u1, client: SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7, index: u0, responder: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE, response-uri: \"https://example.com/response/1\", response-hash: 0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd}}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "rollback": []
+  }
+}

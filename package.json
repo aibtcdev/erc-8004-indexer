@@ -1,0 +1,34 @@
+{
+  "name": "erc-8004-indexer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "wrangler": "set -a && . ./.env && set +a && npx wrangler",
+    "dev": "npm run wrangler -- dev",
+    "deploy:dry-run": "npm run wrangler -- deploy --dry-run",
+    "deploy:staging": "npm run wrangler -- deploy --env staging",
+    "deploy:production": "npm run wrangler -- deploy --env production",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cf-typegen": "npm run wrangler -- types",
+    "register": "tsx --tsconfig tsconfig.scripts.json scripts/register-chainhooks.ts",
+    "check-chainhook": "tsx --tsconfig tsconfig.scripts.json scripts/check-chainhook.ts",
+    "rotate-secret": "tsx --tsconfig tsconfig.scripts.json scripts/rotate-secret.ts",
+    "register-logs-app": "set -a && . ./.env && set +a && tsx --tsconfig tsconfig.scripts.json scripts/register-worker-logs-app.ts",
+    "backfill": "set -a && . ./.env && set +a && tsx --tsconfig tsconfig.scripts.json scripts/backfill.ts"
+  },
+  "dependencies": {
+    "@hirosystems/chainhooks-client": "^2.1.1",
+    "hono": "^4.12.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.13.2",
+    "@cloudflare/workers-types": "^4.20241205.0",
+    "@types/node": "^25.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.77.0"
+  }
+}
