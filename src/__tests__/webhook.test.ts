@@ -16,6 +16,7 @@ const env = rawEnv as unknown as Env;
 import applyIdentityFixture from "./fixtures/apply-identity.json";
 import applyReputationFixture from "./fixtures/apply-reputation.json";
 import applyValidationFixture from "./fixtures/apply-validation.json";
+import rollbackFixture from "./fixtures/rollback-block.json";
 
 const TEST_SECRET = "test-webhook-secret";
 const WEBHOOK_URL = "http://localhost/webhook";
@@ -296,5 +297,69 @@ describe("POST /webhook — sync_state", () => {
 
     expect(row).not.toBeNull();
     expect(row!.last_indexed_block).toBe(100);
+  });
+});
+
+// ============================================================
+// blocks_seen tests
+// ============================================================
+
+describe("POST /webhook — blocks_seen", () => {
+  it("records apply block in blocks_seen", async () => {
+    await setup();
+    const res = await postWebhook(applyIdentityFixture, TEST_SECRET);
+    expect(res.status).toBe(200);
+
+    const row = await env.DB
+      .prepare("SELECT block_height, block_hash, is_canonical FROM blocks_seen WHERE block_height = 100")
+      .first<{ block_height: number; block_hash: string; is_canonical: number }>();
+
+    expect(row).not.toBeNull();
+    expect(row!.block_height).toBe(100);
+    expect(row!.block_hash).toBe("0xblock100");
+    expect(row!.is_canonical).toBe(1);
+  });
+
+  it("marks rollback block as non-canonical", async () => {
+    await setup();
+    // Seed the block first so markBlockNonCanonical has a row to update
+    await postWebhook(applyIdentityFixture, TEST_SECRET);
+
+    const res = await postWebhook(rollbackFixture, TEST_SECRET);
+    expect(res.status).toBe(200);
+
+    const row = await env.DB
+      .prepare("SELECT is_canonical FROM blocks_seen WHERE block_height = 100")
+      .first<{ is_canonical: number }>();
+
+    expect(row).not.toBeNull();
+    expect(row!.is_canonical).toBe(0);
+  });
+});
+
+// ============================================================
+// source health tests
+// ============================================================
+
+describe("POST /webhook — source health", () => {
+  it("updates source health KV on delivery", async () => {
+    await setup();
+    // Clear any residual source health from prior tests in this session
+    await env.INDEXER_KV.delete("source_health:chainhook");
+    const res = await postWebhook(applyIdentityFixture, TEST_SECRET);
+    expect(res.status).toBe(200);
+
+    const raw = await env.INDEXER_KV.get("source_health:chainhook");
+    expect(raw).not.toBeNull();
+
+    const health = JSON.parse(raw!) as {
+      total_deliveries: number;
+      total_blocks_applied: number;
+      last_block_height: number;
+    };
+
+    expect(health.total_deliveries).toBe(1);
+    expect(health.total_blocks_applied).toBe(1);
+    expect(health.last_block_height).toBe(100);
   });
 });
