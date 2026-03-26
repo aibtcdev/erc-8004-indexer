@@ -84,6 +84,45 @@ describe("GET /api/v1/status", () => {
     // After seeding identity + reputation + validation, there should be sync_state entries
     expect(body.sync_state.length).toBeGreaterThan(0);
   });
+
+  it("includes source_health, recent_blocks, and gap in response", async () => {
+    await seedAll();
+    const res = await getEndpoint("/status");
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      source_health: {
+        last_delivery_at: string;
+        last_block_height: number;
+        total_deliveries: number;
+        total_blocks_applied: number;
+        total_blocks_rolled_back: number;
+      } | null;
+      recent_blocks: { block_height: number; block_hash: string }[];
+      gap: {
+        current_block: number;
+        last_indexed_block: number;
+        gap_size: number;
+      } | null;
+    }>();
+
+    // source_health should be written by the webhook deliveries during seedAll
+    expect(body.source_health).not.toBeNull();
+    expect(typeof body.source_health!.last_delivery_at).toBe("string");
+    expect(typeof body.source_health!.last_block_height).toBe("number");
+    expect(body.source_health!.total_deliveries).toBeGreaterThan(0);
+
+    // recent_blocks should contain rows from the blocks_seen table
+    expect(Array.isArray(body.recent_blocks)).toBe(true);
+    expect(body.recent_blocks.length).toBeGreaterThan(0);
+    expect(typeof body.recent_blocks[0].block_height).toBe("number");
+    expect(typeof body.recent_blocks[0].block_hash).toBe("string");
+
+    // gap should be present since we have both source_health and sync_state
+    expect(body.gap).not.toBeNull();
+    expect(typeof body.gap!.current_block).toBe("number");
+    expect(typeof body.gap!.last_indexed_block).toBe("number");
+    expect(typeof body.gap!.gap_size).toBe("number");
+  });
 });
 
 describe("GET /api/v1/stats", () => {
