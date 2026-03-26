@@ -19,6 +19,8 @@ import type { ChainhookEvent } from "./types/chainhook";
 import { isContractLogOperation, isReprValue } from "./types/chainhook";
 import { routeEvent } from "./handlers/index";
 import { handleRollback } from "./handlers/rollback";
+import { upsertBlockSeen, markBlockNonCanonical } from "./utils/query";
+import { updateSourceHealth } from "./utils/source-health";
 
 // ============================================================
 // Contract identifiers
@@ -129,9 +131,11 @@ export async function webhookRoute(
   const contractLastBlock = new Map<string, { height: number; txHash: string | null }>();
   let eventsReceived = 0;
   let eventsProcessed = 0;
+  let highestApplyBlockHeight = 0;
 
   for (const block of payload.event?.apply ?? []) {
     const blockHeight = block.block_identifier.index;
+    const blockHash = block.block_identifier.hash;
 
     for (const tx of block.transactions) {
       const txHash = tx.transaction_identifier.hash;
@@ -186,6 +190,20 @@ export async function webhookRoute(
         }
       }
     }
+
+    // Record block in audit log
+    try {
+      await upsertBlockSeen(db, blockHeight, blockHash);
+    } catch (err) {
+      logger.error("webhookRoute: blocks_seen upsert error", {
+        blockHeight,
+        error: String(err),
+      });
+    }
+
+    if (blockHeight > highestApplyBlockHeight) {
+      highestApplyBlockHeight = blockHeight;
+    }
   }
 
   // --- 4. Process rollback blocks ---
@@ -205,6 +223,16 @@ export async function webhookRoute(
         });
       }
     }
+
+    // Mark block as non-canonical in audit log
+    try {
+      await markBlockNonCanonical(db, blockHeight);
+    } catch (err) {
+      logger.error("webhookRoute: blocks_seen non-canonical mark error", {
+        blockHeight,
+        error: String(err),
+      });
+    }
   }
 
   // --- 5. Update sync_state for each contract seen in apply ---
@@ -220,7 +248,20 @@ export async function webhookRoute(
     }
   }
 
-  // --- 6. Summary log ---
+  // --- 6. Update source health in KV ---
+  try {
+    await updateSourceHealth(c.env.INDEXER_KV, {
+      blocksApplied: payload.event?.apply?.length ?? 0,
+      blocksRolledBack: rollbackCount,
+      lastBlockHeight: highestApplyBlockHeight,
+    });
+  } catch (err) {
+    logger.error("webhookRoute: source health update error", {
+      error: String(err),
+    });
+  }
+
+  // --- 7. Summary log ---
   logger.info("webhookRoute: completed", {
     blockCount: payload.event?.apply?.length ?? 0,
     rollbackCount,
