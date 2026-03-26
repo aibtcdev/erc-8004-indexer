@@ -37,7 +37,7 @@ export const WATCHED_CONTRACTS: readonly string[] = [
   IDENTITY_CONTRACT,
   REPUTATION_CONTRACT,
   VALIDATION_CONTRACT,
-] as const;
+];
 
 // ============================================================
 // sync_state upsert
@@ -120,10 +120,13 @@ export async function webhookRoute(
   }
 
   const db = c.env.DB;
+  const applyBlocks = payload.event?.apply ?? [];
+  const rollbackBlocks = payload.event?.rollback ?? [];
+
   logger.info("webhookRoute: received payload", {
     chainhookUuid: payload.chainhook?.uuid,
-    applyCount: payload.event?.apply?.length ?? 0,
-    rollbackCount: payload.event?.rollback?.length ?? 0,
+    applyCount: applyBlocks.length,
+    rollbackCount: rollbackBlocks.length,
   });
 
   // --- 3. Process apply blocks ---
@@ -133,7 +136,7 @@ export async function webhookRoute(
   let eventsProcessed = 0;
   let highestApplyBlockHeight = 0;
 
-  for (const block of payload.event?.apply ?? []) {
+  for (const block of applyBlocks) {
     const blockHeight = block.block_identifier.index;
     const blockHash = block.block_identifier.hash;
 
@@ -207,8 +210,7 @@ export async function webhookRoute(
   }
 
   // --- 4. Process rollback blocks ---
-  const rollbackCount = payload.event?.rollback?.length ?? 0;
-  for (const block of payload.event?.rollback ?? []) {
+  for (const block of rollbackBlocks) {
     const blockHeight = block.block_identifier.index;
 
     for (const tx of block.transactions) {
@@ -251,8 +253,8 @@ export async function webhookRoute(
   // --- 6. Update source health in KV ---
   try {
     await updateSourceHealth(c.env.INDEXER_KV, {
-      blocksApplied: payload.event?.apply?.length ?? 0,
-      blocksRolledBack: rollbackCount,
+      blocksApplied: applyBlocks.length,
+      blocksRolledBack: rollbackBlocks.length,
       lastBlockHeight: highestApplyBlockHeight,
     });
   } catch (err) {
@@ -263,8 +265,8 @@ export async function webhookRoute(
 
   // --- 7. Summary log ---
   logger.info("webhookRoute: completed", {
-    blockCount: payload.event?.apply?.length ?? 0,
-    rollbackCount,
+    blockCount: applyBlocks.length,
+    rollbackCount: rollbackBlocks.length,
     eventsReceived,
     eventsProcessed,
     duration_ms: Date.now() - startMs,

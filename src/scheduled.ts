@@ -21,9 +21,8 @@ import type {
   ChainhookNetwork,
   EvaluateChainhookRequest,
 } from "@hirosystems/chainhooks-client";
-import type { Env } from "./types";
+import type { Env, SourceHealthEntry } from "./types";
 import { createLogger } from "./middleware/logger";
-import type { SourceHealthEntry } from "./types";
 import { readSourceHealth } from "./utils/source-health";
 
 /** KV key for the cron polling source health snapshot */

@@ -5,7 +5,7 @@
  * GET /api/v1/stats  — global entity counts
  */
 import { Hono } from "hono";
-import type { Env, AppVariables, SyncStateRow } from "../types";
+import type { Env, AppVariables } from "../types";
 import { VERSION } from "../version";
 import { queryStats, querySyncState, queryRecentBlocks } from "../utils/query";
 import { readSourceHealth } from "../utils/source-health";
@@ -26,7 +26,7 @@ statusRoute.get("/status", async (c) => {
   // Compute gap between last known chain tip and last indexed block
   const lastIndexedBlock =
     syncState.length > 0
-      ? Math.max(...syncState.map((r: SyncStateRow) => r.last_indexed_block))
+      ? Math.max(...syncState.map((r) => r.last_indexed_block))
       : 0;
   const currentBlock = sourceHealth?.last_block_height ?? 0;
   const gap =
