@@ -61,6 +61,23 @@ export interface AppVariables {
   logger: Logger;
 }
 
+/**
+ * KV-stored health record for the chainhook delivery source.
+ * Key: "source_health:chainhook"
+ */
+export interface SourceHealthEntry {
+  /** ISO timestamp of the most recent webhook delivery */
+  last_delivery_at: string;
+  /** Block height from the last apply block seen (0 if no apply blocks yet) */
+  last_block_height: number;
+  /** Cumulative count of webhook deliveries received */
+  total_deliveries: number;
+  /** Cumulative count of apply blocks processed */
+  total_blocks_applied: number;
+  /** Cumulative count of rollback blocks processed */
+  total_blocks_rolled_back: number;
+}
+
 // Re-export domain types from the types/ subdirectory.
 // Consumers can import from either 'src/types' or 'src/types/index'.
 export * from "./types/index";
