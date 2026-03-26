@@ -1,106 +1,89 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { Env, IndexRunSummary } from "./lib/types";
-import { agentsRouter } from "./routes/agents";
-import { healthRouter } from "./routes/health";
-import { createLogger, createScheduledLogger } from "./middleware/logger";
-import { fetchAllAgents } from "./services/stacks";
-import { upsertAgents, saveIndexRunSummary, getMeta } from "./services/db";
-import { META_KEYS } from "./lib/constants";
+import { VERSION } from "./version";
+import type { Env, AppVariables } from "./types";
+import { loggerMiddleware } from "./middleware/logger";
+import { requestLoggerMiddleware } from "./middleware/request-logger";
+import { webhookRoute } from "./webhook";
+import { agentsRoute } from "./routes/agents";
+import { feedbackRoute } from "./routes/feedback";
+import { validationsRoute } from "./routes/validations";
+import { statusRoute } from "./routes/status";
+import { lensesRoute } from "./routes/lenses";
+import { scheduledHandler } from "./scheduled";
 
-const app = new Hono<{ Bindings: Env }>();
+// Export IndexerRPC WorkerEntrypoint so other workers can bind to it
+export { IndexerRPC } from "./rpc";
 
-// CORS
-app.use("*", cors());
+// Create Hono app with type safety
+const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
-// Request logging
-app.use("*", async (c, next) => {
-  const start = Date.now();
-  await next();
-  const duration = Date.now() - start;
-  const logger = createLogger(c);
-  logger.info("request", {
-    method: c.req.method,
-    path: c.req.path,
-    status: c.res.status,
-    duration_ms: duration,
+// Apply CORS globally
+app.use(
+  "*",
+  cors({
+    origin: "*",
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Apply logger middleware globally (creates request-scoped logger + requestId)
+app.use("*", loggerMiddleware);
+
+// Apply request logger globally (logs method, path, status, duration_ms per request)
+// Must run after loggerMiddleware so c.var.logger is available
+app.use("*", requestLoggerMiddleware);
+
+// Root endpoint — service info
+app.get("/", (c) => {
+  return c.json({
+    service: "erc-8004-indexer",
+    version: VERSION,
+    status: "ok",
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Mount routes
-app.route("/", healthRouter);
-app.route("/", agentsRouter);
+// Chainhooks 2.0 webhook receiver
+app.post("/webhook", webhookRoute);
 
-// 404 fallback
-app.notFound((c) => c.json({ error: "Not found" }, 404));
+// REST API v1 — agents, feedback, validations, status, lenses
+app.route("/api/v1", agentsRoute);
+app.route("/api/v1", feedbackRoute);
+app.route("/api/v1", validationsRoute);
+app.route("/api/v1", statusRoute);
+app.route("/api/v1", lensesRoute);
+
+// 404 handler
+app.notFound((c) => {
+  return c.json(
+    {
+      error: "Not Found",
+      path: c.req.path,
+    },
+    404
+  );
+});
 
 // Error handler
 app.onError((err, c) => {
-  const logger = createLogger(c);
-  logger.error("unhandled error", { error: err.message, stack: err.stack });
-  return c.json({ error: "Internal server error" }, 500);
+  const logger = c.var.logger;
+  if (logger) {
+    logger.error("Unhandled error", {
+      error: err.message,
+      stack: err.stack,
+    });
+  } else {
+    console.error("[ERROR] Unhandled error", err);
+  }
+  return c.json(
+    {
+      error: "Internal Server Error",
+      message: err.message,
+    },
+    500
+  );
 });
 
-/** Run the indexer: fetch all agents from chain and upsert into D1 */
-async function runIndexer(env: Env, logger: { info: Function; warn: Function; error: Function }): Promise<IndexRunSummary> {
-  const start = Date.now();
-  const network = env.STACKS_NETWORK;
-  const apiUrl = env.STACKS_API_URL;
-
-  // Get last known agent ID for fallback
-  const lastKnownStr = await getMeta(env.DB, META_KEYS.LAST_AGENT_ID);
-  const lastKnown = lastKnownStr ? parseInt(lastKnownStr, 10) : undefined;
-
-  logger.info("index run starting", { network, api_url: apiUrl, last_known_id: lastKnown });
-
-  // Fetch all agents from chain
-  const { agents, lastAgentId } = await fetchAllAgents(apiUrl, network, lastKnown);
-
-  logger.info("fetched agents from chain", {
-    count: agents.length,
-    last_agent_id: lastAgentId,
-  });
-
-  // Upsert into D1
-  const { new_count, updated_count } = await upsertAgents(env.DB, agents);
-
-  const duration = Date.now() - start;
-  const summary: IndexRunSummary = {
-    last_agent_id: lastAgentId,
-    agents_indexed: agents.length,
-    agents_updated: updated_count,
-    agents_new: new_count,
-    duration_ms: duration,
-    network,
-    timestamp: new Date().toISOString(),
-  };
-
-  // Save run metadata
-  await saveIndexRunSummary(env.DB, summary);
-
-  logger.info("index run complete", summary as unknown as Record<string, unknown>);
-
-  return summary;
-}
-
-export default {
-  fetch: app.fetch,
-
-  /** Cron trigger handler — runs the indexer on schedule */
-  async scheduled(
-    _event: ScheduledEvent,
-    env: Env,
-    ctx: ExecutionContext
-  ): Promise<void> {
-    const logger = createScheduledLogger(env, ctx);
-    try {
-      await runIndexer(env, logger);
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      logger.error("scheduled index run failed", {
-        error: error.message,
-        stack: error.stack,
-      });
-    }
-  },
-};
+export default { fetch: app.fetch, scheduled: scheduledHandler };

@@ -1,0 +1,120 @@
+{
+  "chainhook": {
+    "uuid": "test-uuid-identity",
+    "name": "erc8004-identity"
+  },
+  "event": {
+    "chain": "stacks",
+    "network": "mainnet",
+    "apply": [
+      {
+        "block_identifier": { "index": 100, "hash": "0xblock100" },
+        "parent_block_identifier": { "index": 99, "hash": "0xblock99" },
+        "timestamp": 1700000000,
+        "metadata": {
+          "canonical": true,
+          "burn_block_identifier": { "index": 800000, "hash": "0xburn800000" },
+          "burn_block_timestamp": 1700000000,
+          "parent_microblock_identifier": null,
+          "tenure_height": 100,
+          "execution_cost": { "read_count": 0, "read_length": 0, "runtime": 0, "write_count": 0, "write_length": 0 },
+          "tx_total_size": 0,
+          "tx_count": 5
+        },
+        "transactions": [
+          {
+            "transaction_identifier": { "hash": "0xtx_registered" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.identity-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"identity-registry/Registered\", payload: {agent-id: u1, owner: SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7, token-uri: \"https://example.com/agent/1\", metadata-count: u0}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "transaction_identifier": { "hash": "0xtx_metadataset" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.identity-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"identity-registry/MetadataSet\", payload: {agent-id: u1, key: \"name\", value-len: u10}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "transaction_identifier": { "hash": "0xtx_uriupdated" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.identity-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"identity-registry/UriUpdated\", payload: {agent-id: u1, new-uri: \"https://example.com/agent/1/v2\"}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "transaction_identifier": { "hash": "0xtx_approvalforall" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.identity-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"identity-registry/ApprovalForAll\", payload: {agent-id: u1, operator: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE, approved: true}}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "transaction_identifier": { "hash": "0xtx_transfer" },
+            "operations": [
+              {
+                "type": "contract_log",
+                "status": "success",
+                "operation_identifier": { "index": 0 },
+                "metadata": {
+                  "contract_identifier": "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.identity-registry-v2",
+                  "topic": "print",
+                  "value": {
+                    "hex": "0x00",
+                    "repr": "{notification: \"identity-registry/Transfer\", payload: {token-id: u1, sender: SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7, recipient: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE}}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "rollback": []
+  }
+}

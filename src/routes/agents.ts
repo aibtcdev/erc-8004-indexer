@@ -1,41 +1,43 @@
+/**
+ * GET /api/v1/agents
+ * GET /api/v1/agents/:id
+ * GET /api/v1/agents/:id/metadata
+ */
 import { Hono } from "hono";
-import type { Env } from "../lib/types";
-import { getAllAgents, getAgentById, getAgentsByOwner, getAgentCount } from "../services/db";
+import type { Env, AppVariables } from "../types";
+import { parsePagination, paginatedResponse } from "../utils/pagination";
+import {
+  queryAgents,
+  queryAgentById,
+  queryAgentMetadata,
+} from "../utils/query";
+import { parseAgentId } from "./helpers";
 
-const agentsRouter = new Hono<{ Bindings: Env }>();
+export const agentsRoute = new Hono<{
+  Bindings: Env;
+  Variables: AppVariables;
+}>();
 
-/** GET /agents — List all indexed agents */
-agentsRouter.get("/agents", async (c) => {
-  const owner = c.req.query("owner");
-
-  if (owner) {
-    const agents = await getAgentsByOwner(c.env.DB, owner);
-    return c.json({ agents, count: agents.length });
-  }
-
-  const agents = await getAllAgents(c.env.DB);
-  return c.json({ agents, count: agents.length });
+// GET /agents — list all agents with pagination
+agentsRoute.get("/agents", async (c) => {
+  const pagination = parsePagination(c.req.query());
+  const { rows, total } = await queryAgents(c.env.DB, pagination);
+  return c.json(paginatedResponse(rows, total, pagination.limit, pagination.offset));
 });
 
-/** GET /agents/count — Agent count */
-agentsRouter.get("/agents/count", async (c) => {
-  const count = await getAgentCount(c.env.DB);
-  return c.json({ count });
-});
-
-/** GET /agents/:id — Single agent by ID */
-agentsRouter.get("/agents/:id", async (c) => {
-  const id = parseInt(c.req.param("id"), 10);
-  if (isNaN(id) || id < 1) {
-    return c.json({ error: "Invalid agent ID" }, 400);
-  }
-
-  const agent = await getAgentById(c.env.DB, id);
-  if (!agent) {
-    return c.json({ error: "Agent not found" }, 404);
-  }
-
+// GET /agents/:id — get agent by numeric ID
+agentsRoute.get("/agents/:id", async (c) => {
+  const agentId = parseAgentId(c);
+  if (agentId === null) return c.json({ error: "Invalid agent ID" }, 400);
+  const agent = await queryAgentById(c.env.DB, agentId);
+  if (!agent) return c.json({ error: "Not Found" }, 404);
   return c.json(agent);
 });
 
-export { agentsRouter };
+// GET /agents/:id/metadata — list all metadata entries for an agent
+agentsRoute.get("/agents/:id/metadata", async (c) => {
+  const agentId = parseAgentId(c);
+  if (agentId === null) return c.json({ error: "Invalid agent ID" }, 400);
+  const metadata = await queryAgentMetadata(c.env.DB, agentId);
+  return c.json(metadata);
+});
