@@ -23,6 +23,11 @@ import type {
 } from "@hirosystems/chainhooks-client";
 import type { Env } from "./types";
 import { createLogger } from "./middleware/logger";
+import type { SourceHealthEntry } from "./types";
+import { readSourceHealth } from "./utils/source-health";
+
+/** KV key for the cron polling source health snapshot */
+const POLLING_HEALTH_KEY = "source_health:polling";
 
 // ── Stacks API endpoints ─────────────────────────────────────────────────────
 
@@ -32,12 +37,16 @@ const STACKS_API_URL: Record<ChainhookNetwork, string> = {
 };
 
 // Gap thresholds
-/** Minimum gap to trigger a backfill batch */
+/** Minimum gap to trigger a backfill batch under normal conditions */
 const GAP_BACKFILL_THRESHOLD = 10;
+/** Minimum gap to trigger a backfill batch when chainhook source is stale */
+const STALE_GAP_BACKFILL_THRESHOLD = 1;
 /** Gap size that triggers a large-gap warning alert */
 const GAP_ALERT_THRESHOLD = 100;
 /** Maximum blocks to backfill per cron invocation */
 const BACKFILL_BATCH_SIZE = 20;
+/** How long without a chainhook delivery before the source is considered stale (5 minutes) */
+const STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
 // ── Stacks API ────────────────────────────────────────────────────────────────
 
@@ -154,7 +163,26 @@ export async function scheduledHandler(
     return;
   }
 
-  // Step 9: Calculate and log gap
+  // Step 9: Read chainhook source health to determine adaptive gap threshold
+  const sourceHealth = await readSourceHealth(env.INDEXER_KV);
+  const chainhookStale =
+    sourceHealth === null ||
+    Date.now() - new Date(sourceHealth.last_delivery_at).getTime() >
+      STALE_THRESHOLD_MS;
+
+  if (chainhookStale) {
+    logger.info("chainhook_source_stale", {
+      stale: true,
+      last_delivery_at: sourceHealth?.last_delivery_at ?? null,
+      effective_gap_threshold: STALE_GAP_BACKFILL_THRESHOLD,
+    });
+  }
+
+  const effectiveGapThreshold = chainhookStale
+    ? STALE_GAP_BACKFILL_THRESHOLD
+    : GAP_BACKFILL_THRESHOLD;
+
+  // Step 10: Calculate and log gap
   const gap = currentBlock - lastIndexedBlock;
   logger.info("gap_check", {
     current_block: currentBlock,
@@ -163,7 +191,7 @@ export async function scheduledHandler(
     network,
   });
 
-  // Step 10: Alert on large gap
+  // Step 11: Alert on large gap
   if (gap > GAP_ALERT_THRESHOLD) {
     logger.warn("large_gap_detected", {
       gap,
@@ -173,8 +201,8 @@ export async function scheduledHandler(
     });
   }
 
-  // Step 11: Trigger backfill if gap exceeds threshold
-  if (gap > GAP_BACKFILL_THRESHOLD) {
+  // Step 12: Trigger backfill if gap exceeds effective threshold
+  if (gap > effectiveGapThreshold) {
     const fromBlock = lastIndexedBlock + 1;
     // Cap at BACKFILL_BATCH_SIZE blocks per cron run to avoid timeout
     const toBlock = Math.min(
@@ -218,5 +246,17 @@ export async function scheduledHandler(
       error_count: errorCount,
       note: "Events will arrive via webhook asynchronously",
     });
+
+    // Write polling source health so callers can observe that the cron ran
+    const pollingHealth: SourceHealthEntry = {
+      last_delivery_at: new Date().toISOString(),
+      last_block_height: toBlock,
+      total_deliveries: 1,
+      total_blocks_applied: successCount,
+      total_blocks_rolled_back: 0,
+    };
+    ctx.waitUntil(
+      env.INDEXER_KV.put(POLLING_HEALTH_KEY, JSON.stringify(pollingHealth))
+    );
   }
 }
