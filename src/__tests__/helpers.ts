@@ -145,6 +145,16 @@ CREATE TABLE IF NOT EXISTS lenses (
   config      TEXT    NOT NULL DEFAULT '{}',
   created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS blocks_seen (
+  block_height INTEGER PRIMARY KEY,
+  block_hash   TEXT    NOT NULL,
+  is_canonical INTEGER NOT NULL DEFAULT 1,
+  indexed_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_blocks_seen_is_canonical
+  ON blocks_seen (is_canonical);
 `;
 
 /**
@@ -179,6 +189,7 @@ export async function clearData(db: D1Database): Promise<void> {
     "validation_requests",
     "sync_state",
     "lenses",
+    "blocks_seen",
     "agents",
   ];
   for (const table of tables) {

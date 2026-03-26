@@ -8,6 +8,7 @@
 import type {
   AgentRow,
   AgentMetadataRow,
+  BlockSeenRow,
   ClientApprovalRow,
   FeedbackRow,
   FeedbackResponseRow,
@@ -421,6 +422,71 @@ export async function querySyncState(db: D1Database): Promise<SyncStateRow[]> {
     .prepare("SELECT * FROM sync_state ORDER BY contract_id ASC")
     .all<SyncStateRow>();
   return result.results ?? [];
+}
+
+// ============================================================
+// Blocks seen
+// ============================================================
+
+/**
+ * Insert or replace a blocks_seen record for the given block.
+ * Uses INSERT OR REPLACE so re-processing the same block height is safe.
+ * is_canonical resets to 1 on upsert; call markBlockNonCanonical() separately
+ * when a fork is detected.
+ */
+export async function upsertBlockSeen(
+  db: D1Database,
+  blockHeight: number,
+  blockHash: string
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT OR REPLACE INTO blocks_seen (block_height, block_hash, is_canonical, indexed_at)
+       VALUES (?, ?, 1, datetime('now'))`
+    )
+    .bind(blockHeight, blockHash)
+    .run();
+}
+
+/**
+ * Mark a previously-seen block as non-canonical (forked/orphaned).
+ * No-op if the block has not been seen.
+ */
+export async function markBlockNonCanonical(
+  db: D1Database,
+  blockHeight: number
+): Promise<void> {
+  await db
+    .prepare(
+      "UPDATE blocks_seen SET is_canonical = 0 WHERE block_height = ?"
+    )
+    .bind(blockHeight)
+    .run();
+}
+
+/**
+ * Query the most recently indexed blocks, newest first.
+ */
+export async function queryRecentBlocks(
+  db: D1Database,
+  { limit, offset }: { limit: number; offset: number }
+): Promise<{ rows: BlockSeenRow[]; total: number }> {
+  const [countResult, rowsResult] = await Promise.all([
+    db
+      .prepare("SELECT COUNT(*) AS total FROM blocks_seen")
+      .first<{ total: number }>(),
+    db
+      .prepare(
+        "SELECT * FROM blocks_seen ORDER BY block_height DESC LIMIT ? OFFSET ?"
+      )
+      .bind(limit, offset)
+      .all<BlockSeenRow>(),
+  ]);
+
+  return {
+    rows: rowsResult.results ?? [],
+    total: countResult?.total ?? 0,
+  };
 }
 
 // ============================================================

@@ -143,6 +143,19 @@ export interface SyncStateRow {
 }
 
 /**
+ * Row from the `blocks_seen` table.
+ * Audit log of every block the indexer has processed.
+ * is_canonical: 1 = on the canonical chain, 0 = non-canonical (forked/orphaned).
+ */
+export interface BlockSeenRow {
+  block_height: number;
+  block_hash: string;
+  /** 1 = canonical, 0 = non-canonical */
+  is_canonical: number;
+  indexed_at: string;
+}
+
+/**
  * Row from the `lenses` table.
  * Registry of named reputation lens aggregations with full configuration.
  */
