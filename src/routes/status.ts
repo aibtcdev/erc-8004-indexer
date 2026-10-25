@@ -10,6 +10,26 @@ import { VERSION } from "../version";
 import { queryStats, querySyncState, queryRecentBlocks } from "../utils/query";
 import { readSourceHealth } from "../utils/source-health";
 
+/** Gap (in blocks) above which the indexer reports "lagging". Matches GAP_ALERT_THRESHOLD in src/scheduled.ts. */
+export const STATUS_LAG_THRESHOLD = 100;
+
+/**
+ * Overall status derived from what was actually indexed, so monitoring can tell
+ * "serving data" from "deployed but empty" (#3):
+ *   unsynced: no contract has ever been indexed, or no chainhook delivery was recorded
+ *   lagging:  the last indexed block trails the chain tip by more than STATUS_LAG_THRESHOLD
+ *   ok:       otherwise
+ */
+export function deriveStatus(
+  syncStateCount: number,
+  hasSourceHealth: boolean,
+  gapSize: number | null
+): "ok" | "lagging" | "unsynced" {
+  if (syncStateCount === 0 || !hasSourceHealth) return "unsynced";
+  if (gapSize !== null && gapSize > STATUS_LAG_THRESHOLD) return "lagging";
+  return "ok";
+}
+
 export const statusRoute = new Hono<{
   Bindings: Env;
   Variables: AppVariables;
@@ -39,7 +59,7 @@ statusRoute.get("/status", async (c) => {
       : null;
 
   return c.json({
-    status: "ok",
+    status: deriveStatus(syncState.length, sourceHealth !== null, gap?.gap_size ?? null),
     version: VERSION,
     timestamp: new Date().toISOString(),
     sync_state: syncState,

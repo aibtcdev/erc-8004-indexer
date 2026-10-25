@@ -67,6 +67,17 @@ async function seedAll(): Promise<void> {
 // ============================================================
 
 describe("GET /api/v1/status", () => {
+  it("reports unsynced when nothing has been indexed yet (#3)", async () => {
+    await setupDb(env.DB);
+    await clearData(env.DB);
+    await env.INDEXER_KV.delete("source_health:chainhook");
+    const res = await getEndpoint("/status");
+    expect(res.status).toBe(200);
+    const body = await res.json<{ status: string; sync_state: unknown[] }>();
+    expect(body.sync_state.length).toBe(0);
+    expect(body.status).toBe("unsynced");
+  });
+
   it("returns status ok with version and timestamp", async () => {
     await seedAll();
     const res = await getEndpoint("/status");
@@ -494,5 +505,17 @@ describe("GET /api/v1/validations/:hash", () => {
     expect(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
     expect(body.error).toBe("Not Found");
+  });
+});
+
+describe("deriveStatus", () => {
+  it("maps indexed state to ok / lagging / unsynced", async () => {
+    const { deriveStatus, STATUS_LAG_THRESHOLD } = await import("../routes/status");
+    expect(deriveStatus(0, true, null)).toBe("unsynced");
+    expect(deriveStatus(3, false, 0)).toBe("unsynced");
+    expect(deriveStatus(3, true, 0)).toBe("ok");
+    expect(deriveStatus(3, true, STATUS_LAG_THRESHOLD)).toBe("ok");
+    expect(deriveStatus(3, true, STATUS_LAG_THRESHOLD + 1)).toBe("lagging");
+    expect(deriveStatus(3, true, null)).toBe("ok");
   });
 });
