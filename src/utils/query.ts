@@ -490,6 +490,68 @@ export async function queryRecentBlocks(
 }
 
 // ============================================================
+// Badge
+// ============================================================
+
+export interface AgentBadgeRow {
+  agent_id: number;
+  owner: string;
+  created_at_block: number;
+  /** hex-encoded UTF-8 value for metadata key "name" — may be empty string */
+  name_hex: string | null;
+  /** hex-encoded UTF-8 value for metadata key "bns" — may be empty string */
+  bns_hex: string | null;
+  /** hex-encoded UTF-8 value for metadata key "btc" — may be empty string */
+  btc_hex: string | null;
+  /** total number of metadata keys registered for this agent */
+  metadata_count: number;
+}
+
+/**
+ * Fetch all fields needed to render an agent identity badge in a single round
+ * trip using a LEFT JOIN against agent_metadata.
+ *
+ * Returns null if the agent is not registered.
+ */
+export async function queryAgentForBadge(
+  db: D1Database,
+  agentId: number
+): Promise<AgentBadgeRow | null> {
+  // Pivot three specific metadata keys via conditional aggregation.
+  // value_hex is '' when the on-chain backfill pass has not yet run — the badge
+  // layer treats an empty string the same as null (decodeMetaHex returns null).
+  type RawRow = {
+    agent_id: number;
+    owner: string;
+    created_at_block: number;
+    name_hex: string | null;
+    bns_hex: string | null;
+    btc_hex: string | null;
+    metadata_count: number;
+  };
+
+  const row = await db
+    .prepare(
+      `SELECT
+         a.agent_id,
+         a.owner,
+         a.created_at_block,
+         MAX(CASE WHEN m.key = 'name' THEN m.value_hex END) AS name_hex,
+         MAX(CASE WHEN m.key = 'bns'  THEN m.value_hex END) AS bns_hex,
+         MAX(CASE WHEN m.key = 'btc'  THEN m.value_hex END) AS btc_hex,
+         COUNT(m.id)                                         AS metadata_count
+       FROM agents a
+       LEFT JOIN agent_metadata m ON m.agent_id = a.agent_id
+       WHERE a.agent_id = ?
+       GROUP BY a.agent_id`
+    )
+    .bind(agentId)
+    .first<RawRow>();
+
+  return row ?? null;
+}
+
+// ============================================================
 // Lenses
 // ============================================================
 

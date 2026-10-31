@@ -10,6 +10,7 @@ import { feedbackRoute } from "./routes/feedback";
 import { validationsRoute } from "./routes/validations";
 import { statusRoute } from "./routes/status";
 import { lensesRoute } from "./routes/lenses";
+import { badgeRoute } from "./routes/badge";
 import { scheduledHandler } from "./scheduled";
 
 // Export IndexerRPC WorkerEntrypoint so other workers can bind to it
@@ -54,6 +55,7 @@ app.route("/api/v1", feedbackRoute);
 app.route("/api/v1", validationsRoute);
 app.route("/api/v1", statusRoute);
 app.route("/api/v1", lensesRoute);
+app.route("/api/v1", badgeRoute);
 
 // 404 handler
 app.notFound((c) => {
